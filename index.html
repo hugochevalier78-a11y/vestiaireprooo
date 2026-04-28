@@ -9,7 +9,7 @@
 <meta name="description" content="VestiairePro — tableau de bord personnel pour suivre annonces, ventes, revenus et statistiques.">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
-<title>VestiairePro v21 Supabase</title>
+<title>VestiairePro v22 Abonnement</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -446,6 +446,15 @@ body.light-mode .topbar-avatar{color:#fff;}
 .supabase-badge{font-size:10px;color:var(--teal);font-family:'DM Mono',monospace;margin-top:5px;}
 .btn-admin{margin-top:8px;}
 
+
+/* SUBSCRIPTION v22 */
+.subscription-card{background:linear-gradient(180deg,rgba(0,180,166,.10),rgba(0,180,166,.03));border:1px solid rgba(0,180,166,.28);border-radius:18px;padding:16px;margin-bottom:12px;}
+.subscription-price{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--teal);margin:6px 0;}
+.subscription-price span{font-size:13px;color:var(--muted);font-family:'Instrument Sans',sans-serif;font-weight:500;}
+.subscription-list{display:flex;flex-direction:column;gap:8px;margin:12px 0;}
+.subscription-li{font-size:13px;color:var(--text);display:flex;gap:8px;align-items:flex-start;line-height:1.35;}
+.trial-note{font-size:12px;color:var(--warning);line-height:1.45;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.22);border-radius:12px;padding:10px;margin:10px 0;}
+
 </style>
 </head>
 <body>
@@ -481,9 +490,37 @@ body.light-mode .topbar-avatar{color:#fff;}
     <div class="access-card">
       <h3 id="accessTitle">Accès terminé</h3>
       <p id="accessMessage">Ton essai gratuit de 24h est terminé.</p>
-      <button class="btn btn-primary btn-full" onclick="window.location.href='mailto:contact@vestiairepro.fr?subject=Abonnement VestiairePro'">Demander l’accès</button>
+      <button class="btn btn-primary btn-full" onclick="openModal('modalSubscribe')">Choisir l’abonnement 4,99€/mois</button>
       <button class="btn btn-full" style="margin-top:8px" onclick="logout()">Se déconnecter</button>
     </div>
+  </div>
+</div>
+
+
+<!-- MODAL ABONNEMENT v22 -->
+<div class="modal-overlay" id="modalSubscribe">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">Abonnement VestiairePro</span>
+      <button class="btn btn-sm" onclick="closeModal('modalSubscribe')">✕</button>
+    </div>
+
+    <div class="subscription-card">
+      <div class="badge badge-teal">Accès complet</div>
+      <div class="subscription-price">4,99€ <span>/ mois</span></div>
+      <div class="trial-note">Ton essai est gratuit pendant 1 jour seulement. Après 24h, l’accès complet nécessite l’abonnement.</div>
+      <div class="subscription-list">
+        <div class="subscription-li">✅ Suivi des annonces, ventes, revenus et statistiques</div>
+        <div class="subscription-li">✅ Données synchronisées entre PC, iPhone et Android</div>
+        <div class="subscription-li">✅ Import / actualisation des données</div>
+        <div class="subscription-li">✅ Notifications et tableau de bord complet</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="startSubscription()">Choisir l’abonnement 4,99€/mois</button>
+      <button class="btn btn-full" style="margin-top:8px" onclick="closeModal('modalSubscribe')">Continuer l’essai gratuit</button>
+    </div>
+
+    <p class="mini-note">Paiement sécurisé via Stripe. Si tu viens de payer et que l’accès ne se met pas à jour, reconnecte-toi ou contacte l’admin.</p>
   </div>
 </div>
 
@@ -2865,6 +2902,115 @@ window.onload=function(){
       toast('Erreur admin : '+(e.message||e),true);
     }
   };
+})();
+
+
+// ===================== PATCH v22 : abonnement 4,99€/mois + message essai 1 jour =====================
+(function(){
+  const CREATE_CHECKOUT_URL='/.netlify/functions/create-checkout-session';
+  const VERIFY_CHECKOUT_URL='/.netlify/functions/verify-checkout';
+
+  function v22Toast(msg,err){ if(typeof notify==='function') notify(msg,!!err); }
+  async function v22AuthHeader(){
+    if(!window.supabase) throw new Error('Supabase non chargé.');
+    if(typeof initSupabaseV21==='function'){}
+    // On récupère la session depuis le client Supabase déjà créé par v21.
+    const cfgRes = await fetch('/.netlify/functions/supabase-config');
+    const cfg = await cfgRes.json().catch(()=>({}));
+    if(!cfg.url || !cfg.anonKey) throw new Error('Supabase non configuré.');
+    const client = window.__v22sb || (window.__v22sb = window.supabase.createClient(cfg.url, cfg.anonKey));
+    const {data}=await client.auth.getSession();
+    const token=data?.session?.access_token;
+    if(!token) throw new Error('Connecte-toi avant de choisir un abonnement.');
+    return {'Content-Type':'application/json','Authorization':'Bearer '+token};
+  }
+
+  async function v22Post(url,payload={}){
+    const headers=await v22AuthHeader();
+    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error||('Erreur serveur '+r.status));
+    return data;
+  }
+
+  window.startSubscription=async function(){
+    try{
+      v22Toast('Création du paiement...');
+      const data=await v22Post(CREATE_CHECKOUT_URL,{});
+      if(!data.url) throw new Error('Aucun lien Stripe renvoyé.');
+      window.location.href=data.url;
+    }catch(e){
+      console.error(e);
+      v22Toast('Abonnement indisponible : '+(e.message||e),true);
+      const box=document.getElementById('accessMessage');
+      if(box) box.textContent='Le paiement n’est pas encore configuré. Vérifie STRIPE_SECRET_KEY et STRIPE_PRICE_ID dans Netlify.';
+    }
+  };
+
+  async function verifySubscriptionReturn(){
+    const params=new URLSearchParams(window.location.search);
+    const sessionId=params.get('session_id');
+    if(!sessionId)return;
+    try{
+      v22Toast('Vérification du paiement...');
+      await v22Post(VERIFY_CHECKOUT_URL,{session_id:sessionId});
+      v22Toast('✅ Abonnement activé');
+      const clean=window.location.origin+window.location.pathname;
+      window.history.replaceState({},document.title,clean);
+      setTimeout(()=>window.location.reload(),900);
+    }catch(e){
+      console.error(e);
+      v22Toast('Paiement non vérifié : '+(e.message||e),true);
+    }
+  }
+
+  const oldBootV22=window.bootAuth;
+  if(oldBootV22){
+    window.bootAuth=async function(){
+      await oldBootV22.apply(this,arguments);
+      setTimeout(verifySubscriptionReturn,500);
+    };
+  }
+
+  const oldFinishLoginToast=setTimeout;
+  // Message visible juste après création du compte : on intercepte authSubmit côté register en ajoutant une modale après le flux.
+  const oldAuthSubmitV22=window.authSubmit;
+  if(oldAuthSubmitV22){
+    window.authSubmit=async function(){
+      const wasRegister=(window.authMode==='register' || (typeof authMode!=='undefined' && authMode==='register'));
+      await oldAuthSubmitV22.apply(this,arguments);
+      if(wasRegister){
+        setTimeout(()=>{
+          const authOpen=document.getElementById('authScreen')?.classList.contains('open');
+          const accessOpen=document.getElementById('accessScreen')?.classList.contains('open');
+          if(!authOpen && !accessOpen){
+            v22Toast('Essai gratuit activé pendant 1 jour seulement');
+            if(typeof openModal==='function') openModal('modalSubscribe');
+          }
+        },900);
+      }
+    };
+  }
+
+  // Ajout bouton abonnement dans le profil pour les comptes non payés.
+  const oldOpenProfilV22=window.openProfil;
+  if(oldOpenProfilV22){
+    window.openProfil=function(){
+      oldOpenProfilV22.apply(this,arguments);
+      setTimeout(()=>{
+        const modal=document.getElementById('modalProfil');
+        if(!modal || document.getElementById('btnSubscribeV22'))return;
+        const btn=document.createElement('button');
+        btn.id='btnSubscribeV22';
+        btn.className='btn btn-full btn-primary';
+        btn.style.marginTop='8px';
+        btn.textContent='💳 Choisir l’abonnement 4,99€/mois';
+        btn.onclick=function(){openModal('modalSubscribe');};
+        const logoutBtn=Array.from(modal.querySelectorAll('button')).find(b=>String(b.textContent||'').includes('Se déconnecter'));
+        if(logoutBtn && logoutBtn.parentElement) logoutBtn.parentElement.insertBefore(btn,logoutBtn);
+      },120);
+    };
+  }
 })();
 
 </script>
