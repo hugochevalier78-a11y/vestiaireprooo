@@ -1,0 +1,3018 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0D0F14">
+<meta name="description" content="VestiairePro — tableau de bord personnel pour suivre annonces, ventes, revenus et statistiques.">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<title>VestiairePro v22 Abonnement</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --teal:#00B4A6; --teal-dark:#008F84; --teal-glow:rgba(0,180,166,0.18);
+  --coral:#FF6B6B; --gold:#FFD166; --bg:#0D0F14; --bg2:#13161E; --bg3:#1A1E29;
+  --border:rgba(255,255,255,0.08); --text:#E8EAF0; --muted:#6B7280;
+  --success:#34D399; --warning:#FBBF24;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;overflow:hidden;position:fixed;width:100%;}
+
+/* APP SHELL */
+.app{display:flex;flex-direction:column;height:100%;height:100dvh;}
+
+/* TOP BAR */
+.topbar{
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:calc(var(--safe-top) + 12px) 16px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+  position:relative;z-index:10;
+}
+.topbar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:#fff;letter-spacing:-0.5px;}
+.topbar-logo span{color:var(--teal);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-dark));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;cursor:pointer;}
+.topbar-notif{width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;border:1px solid var(--border);position:relative;}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--coral);border:2px solid var(--bg2);}
+
+/* SCROLL AREA */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.scroll-area::-webkit-scrollbar{display:none;}
+
+/* BOTTOM NAV */
+.bottom-nav{
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(5,1fr);
+  padding:8px 0 calc(var(--safe-bottom) + 8px);
+  flex-shrink:0;position:relative;z-index:10;
+}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;position:relative;}
+.nav-btn-icon{font-size:22px;transition:transform 0.15s;}
+.nav-btn-label{font-size:10px;font-weight:500;color:var(--muted);transition:color 0.15s;font-family:'DM Mono',monospace;}
+.nav-btn.active .nav-btn-label{color:var(--teal);}
+.nav-btn.active .nav-btn-icon{transform:scale(1.15);}
+.nav-btn-badge{position:absolute;top:2px;right:calc(50% - 16px);background:var(--coral);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;}
+
+/* PANELS */
+.panel{display:none;padding:16px;padding-bottom:24px;}
+.panel.active{display:block;}
+
+/* PAGE TITLE */
+.page-header{margin-bottom:18px;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.5px;}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+
+/* STATS GRID 2x2 */
+.stats-2x2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;right:0;width:50px;height:50px;border-radius:0 14px 0 100%;opacity:0.08;}
+.stat-card:nth-child(1)::before{background:var(--teal);}
+.stat-card:nth-child(2)::before{background:var(--gold);}
+.stat-card:nth-child(3)::before{background:var(--coral);}
+.stat-card:nth-child(4)::before{background:var(--success);}
+.stat-icon{font-size:18px;margin-bottom:6px;display:block;}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:500;}
+.stat-value{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.5px;margin:4px 0 2px;}
+.stat-change{font-size:10px;font-family:'DM Mono',monospace;}
+.stat-change.up{color:var(--success);}
+.stat-change.down{color:var(--coral);}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+.card-action{font-size:12px;color:var(--teal);font-weight:500;}
+
+/* BADGE */
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;font-family:'DM Mono',monospace;}
+.badge-green{background:rgba(52,211,153,0.12);color:var(--success);}
+.badge-yellow{background:rgba(251,191,36,0.12);color:var(--warning);}
+.badge-red{background:rgba(255,107,107,0.12);color:var(--coral);}
+.badge-teal{background:var(--teal-glow);color:var(--teal);}
+.badge-gray{background:var(--bg3);color:var(--muted);}
+
+/* ALERT */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:12px;margin-bottom:10px;border:1px solid;}
+.alert-info{background:rgba(0,180,166,0.08);border-color:rgba(0,180,166,0.2);}
+.alert-warn{background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.2);}
+.alert-text{font-size:12px;line-height:1.5;color:var(--muted);}
+.alert-text strong{color:#fff;}
+
+/* PROGRESS */
+.progress-bar{height:5px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-top:5px;}
+.progress-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--teal),var(--teal-dark));}
+
+/* VENTE ROW */
+.vente-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+.vente-row:last-child{border-bottom:none;}
+.vente-thumb{width:38px;height:38px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.vente-info{flex:1;min-width:0;}
+.vente-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vente-buyer{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.vente-right{text-align:right;flex-shrink:0;}
+.vente-price{font-family:'DM Mono',monospace;font-weight:600;font-size:14px;color:var(--teal);}
+.vente-date{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* ANNONCE ROW */
+.annonce-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+.annonce-row:last-child{border-bottom:none;}
+.annonce-thumb{width:44px;height:44px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.annonce-info{flex:1;min-width:0;}
+.annonce-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annonce-meta{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;}
+.annonce-right{text-align:right;flex-shrink:0;}
+.annonce-price{font-family:'DM Mono',monospace;font-weight:700;font-size:15px;}
+.annonce-actions{display:flex;gap:6px;margin-top:4px;justify-content:flex-end;}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;background:var(--bg3);color:var(--text);font-family:'Instrument Sans',sans-serif;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:active{transform:scale(0.96);}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.btn-primary{background:var(--teal);color:#fff;border:none;box-shadow:0 0 14px var(--teal-glow);}
+.btn-primary:active{background:var(--teal-dark);}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:8px;}
+.btn-danger{background:rgba(255,107,107,0.1);color:var(--coral);border-color:rgba(255,107,107,0.2);}
+.btn-success{background:rgba(52,211,153,0.12);color:var(--success);border-color:rgba(52,211,153,0.25);}
+.btn-full{width:100%;justify-content:center;}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(var(--safe-bottom) + 70px);right:16px;width:52px;height:52px;border-radius:50%;background:var(--teal);box-shadow:0 4px 20px rgba(0,180,166,0.4);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;cursor:pointer;z-index:20;transition:transform 0.15s;}
+.fab:active{transform:scale(0.92);}
+
+/* BAR CHART */
+.bar-chart{display:flex;align-items:flex-end;gap:4px;}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+.bar{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--teal),var(--teal-dark));transition:height 0.5s ease;min-height:3px;}
+.bar.empty{background:var(--bg3);border:1px solid var(--border);border-bottom:none;}
+.bar-labels{display:flex;gap:4px;margin-top:5px;}
+.bar-label{flex:1;text-align:center;font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;}
+
+/* MINI BAR (week) */
+.mini-bars{display:flex;align-items:flex-end;gap:5px;}
+.mini-bar{flex:1;border-radius:3px 3px 0 0;background:var(--bg3);min-height:3px;transition:background 0.2s;}
+.mini-bar.best{background:var(--teal);}
+
+/* TABS */
+.tabs-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;}
+.tabs-scroll::-webkit-scrollbar{display:none;}
+.tab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;cursor:pointer;border:1px solid transparent;transition:all 0.15s;}
+.tab.active{background:var(--bg3);color:#fff;border-color:var(--border);}
+
+/* TOGGLE */
+.toggle{width:40px;height:22px;border-radius:20px;background:var(--teal);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.off{background:var(--bg3);border:1px solid var(--border);}
+.toggle::after{content:'';position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:all 0.2s;}
+.toggle.off::after{right:unset;left:2px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:50;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 16px calc(var(--safe-bottom) + 20px);width:100%;max-height:90dvh;overflow-y:auto;}
+.modal-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 18px;display:block;}
+.modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:18px;}
+.modal-close-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.5px;}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:15px;font-family:'Instrument Sans',sans-serif;outline:none;-webkit-appearance:none;}
+.form-input:focus{border-color:var(--teal);}
+.form-select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:15px;font-family:'Instrument Sans',sans-serif;outline:none;-webkit-appearance:none;cursor:pointer;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.form-actions .btn{flex:1;justify-content:center;}
+
+/* PRICE SUGGESTION */
+.price-sug{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+.price-sug:last-child{border-bottom:none;}
+.price-sug-icon{width:36px;height:36px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.price-sug-info{flex:1;min-width:0;}
+.price-sug-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.price-sug-meta{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;}
+.price-sug-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.price-old{font-size:11px;color:var(--muted);text-decoration:line-through;font-family:'DM Mono',monospace;}
+.price-new{font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--teal);}
+
+/* AUTO REPLY */
+.auto-row{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:var(--bg3);margin-bottom:8px;border:1px solid var(--border);}
+.auto-title{font-size:13px;font-weight:500;margin-bottom:2px;}
+.auto-trigger{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+
+/* MSG TEMPLATE */
+.msg-template{background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border);}
+.msg-template-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.msg-template-title{font-size:13px;font-weight:500;}
+.msg-template-text{font-size:12px;color:var(--muted);line-height:1.5;}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 20px;color:var(--muted);}
+.empty-icon{font-size:36px;margin-bottom:10px;}
+.empty-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.empty-sub{font-size:12px;line-height:1.5;}
+
+/* NOTIF */
+.notif{position:fixed;top:calc(var(--safe-top) + 60px);left:16px;right:16px;background:var(--bg2);border:1px solid var(--teal);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);z-index:200;transform:translateY(-20px);opacity:0;transition:all 0.3s;pointer-events:none;text-align:center;}
+.notif.show{transform:translateY(0);opacity:1;}
+.notif.error{border-color:var(--coral);}
+
+/* IMPORT ZONE */
+.import-zone{border:2px dashed var(--border);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;}
+.import-zone:active{border-color:var(--teal);background:var(--teal-glow);}
+
+/* SECTION LABEL */
+.section-label{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;}
+
+/* PERF ROW */
+.perf-row{margin-bottom:12px;}
+.perf-row-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.perf-row-label{color:var(--muted);}
+
+/* IMPORT PREVIEW */
+.import-preview-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border-radius:8px;margin-bottom:5px;font-size:12px;}
+.import-preview-ok{color:var(--success);}
+.import-preview-err{color:var(--coral);}
+
+/* ADD CHOICE GUIDANCE */
+.add-choice-intro{font-size:12px;color:var(--muted);line-height:1.55;margin:-6px 0 14px;}
+.seller-choice-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.seller-choice-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;}
+.seller-choice-card.recommended{border-color:rgba(0,180,166,.35);box-shadow:0 0 0 1px rgba(0,180,166,.08) inset;background:linear-gradient(180deg,rgba(0,180,166,.08),transparent 70%),var(--bg2);}
+.seller-choice-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+.seller-choice-icon{width:42px;height:42px;border-radius:12px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.seller-choice-title{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;letter-spacing:-.2px;margin-bottom:2px;}
+.seller-choice-sub{font-size:11px;color:var(--muted);line-height:1.45;}
+.seller-choice-badge{display:inline-flex;margin-top:7px;padding:4px 8px;border-radius:999px;background:var(--teal-glow);color:var(--teal);font-size:10px;font-family:'DM Mono',monospace;font-weight:700;}
+.manual-actions{margin:10px 0 0;}
+.manual-actions .action-card{padding:12px 10px;background:var(--bg3);}
+.quick-choice-note{font-size:11px;color:var(--muted);text-align:center;line-height:1.5;margin:10px 4px 0;}
+
+/* ACTIONS ROW */
+.actions-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.action-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center;transition:border-color 0.2s;}
+.action-card:active{border-color:var(--teal);background:var(--teal-glow);}
+.action-card-icon{font-size:24px;margin-bottom:6px;}
+.action-card-label{font-size:12px;font-weight:500;}
+.annonce-link{font-size:10px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annonce-link a{color:var(--teal);text-decoration:none;font-family:'DM Mono',monospace;}
+.check-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.check-row:last-child{border-bottom:none;}
+.check-row input{width:18px;height:18px;accent-color:var(--teal);}
+.mini-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;}
+.onboarding-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;text-align:center;margin-bottom:6px;}
+.onboarding-logo span{color:var(--teal);}
+.install-steps{padding-left:18px;color:var(--muted);font-size:13px;line-height:1.7;margin:8px 0 0;}
+.install-steps strong{color:var(--text);}
+
+/* LIGHT MODE */
+body.light-mode{
+  --bg:#F6F7FB;
+  --bg2:#FFFFFF;
+  --bg3:#EEF1F6;
+  --border:rgba(17,24,39,0.12);
+  --text:#111827;
+  --muted:#6B7280;
+  --teal-glow:rgba(0,180,166,0.12);
+}
+body.light-mode .auth-screen{background:linear-gradient(180deg,rgba(246,247,251,.96),rgba(246,247,251,.98));}
+body.light-mode .topbar-logo,
+body.light-mode .page-title,
+body.light-mode .card-title,
+body.light-mode .modal-title,
+body.light-mode .auth-logo,
+body.light-mode .onboarding-logo,
+body.light-mode .empty-title{color:var(--text);}
+body.light-mode .alert-text strong{color:var(--text)!important;}
+body.light-mode .btn-primary,
+body.light-mode .topbar-avatar{color:#fff;}
+.auth-error{display:none;background:rgba(255,107,107,0.10);border:1px solid rgba(255,107,107,0.25);color:var(--coral);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.4;margin-bottom:12px;}
+.auth-error.show{display:block;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.panel.active>*{animation:fadeUp 0.25s ease both;}
+.panel.active>*:nth-child(2){animation-delay:.04s}
+.panel.active>*:nth-child(3){animation-delay:.08s}
+.panel.active>*:nth-child(4){animation-delay:.12s}
+.panel.active>*:nth-child(5){animation-delay:.16s}
+
+/* AUTH SCREEN */
+.auth-screen{display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(180deg,rgba(13,15,20,.96),rgba(13,15,20,.98));padding:calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 20px);align-items:center;justify-content:center;}
+.auth-screen.open{display:flex;}
+.auth-card{width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:22px;box-shadow:0 20px 80px rgba(0,0,0,.45);}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;margin-bottom:6px;}
+.auth-logo span{color:var(--teal);}
+.auth-sub{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--bg3);border:1px solid var(--border);padding:5px;border-radius:14px;margin-bottom:16px;}
+.auth-tab{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:9px 8px;font-weight:700;font-family:'Instrument Sans',sans-serif;cursor:pointer;}
+.auth-tab.active{background:var(--teal);color:#fff;}
+.auth-foot{font-size:11px;color:var(--muted);line-height:1.5;margin-top:12px;text-align:center;}
+.account-pill{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--muted);}
+.account-pill strong{display:block;color:var(--text);font-size:13px;margin-top:2px;word-break:break-all;}
+
+.password-wrap{position:relative;display:flex;align-items:center;}
+.password-wrap .form-input{padding-right:48px;}
+.password-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.password-eye:active{background:var(--bg3);transform:translateY(-50%) scale(.96);}
+.notification-list{display:flex;flex-direction:column;gap:8px;max-height:56dvh;overflow-y:auto;padding-right:2px;}
+.notification-item{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;}
+.notification-item.unread{border-color:rgba(0,180,166,.45);box-shadow:0 0 0 1px rgba(0,180,166,.08) inset;}
+.notification-item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;}
+.notification-message{font-size:13px;font-weight:600;line-height:1.35;}
+.notification-date{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;}
+.notification-type{font-size:11px;color:var(--teal);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;margin-top:6px;}
+
+
+
+
+/* PATCH v9 - lisibilite + tooltip graphique */
+.chart-tooltip{position:fixed;z-index:999;background:var(--bg2);color:var(--text);border:1px solid var(--teal);border-radius:12px;padding:8px 10px;font-size:12px;font-weight:700;font-family:'DM Mono',monospace;box-shadow:0 10px 30px rgba(0,0,0,.35);pointer-events:none;transform:translate(-50%,-110%);opacity:0;transition:opacity .15s ease;white-space:nowrap;}
+.chart-tooltip.show{opacity:1;}
+.bar-wrap{position:relative;min-width:0;}
+.bar{touch-action:manipulation;}
+.annonce-row{position:relative;align-items:flex-start;gap:12px;padding:14px 0;min-height:112px;}
+.annonce-thumb{margin-top:2px;}
+.annonce-info{min-width:0;padding-right:104px;}
+.annonce-name{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;max-width:100%;}
+.annonce-meta{white-space:normal;line-height:1.35;}
+.annonce-link{margin-top:6px;max-width:100%;white-space:normal;overflow:visible;text-overflow:clip;}
+.annonce-link a{display:inline-flex;align-items:center;max-width:100%;padding:4px 8px;border-radius:999px;background:rgba(0,180,166,.12);color:var(--teal);font-size:11px;line-height:1.2;white-space:normal;overflow-wrap:anywhere;}
+.annonce-right{position:absolute;top:14px;right:0;width:98px;text-align:right;}
+.annonce-actions{display:grid;grid-template-columns:repeat(2,34px);justify-content:end;gap:6px;margin-top:6px;}
+.annonce-actions .badge{grid-column:1 / -1;justify-self:end;max-width:98px;overflow:hidden;text-overflow:ellipsis;}
+.annonce-actions .btn-sm{width:34px;height:34px;padding:0;justify-content:center;}
+.vente-row{min-width:0;align-items:flex-start;}
+.vente-info{min-width:0;overflow:hidden;}
+.vente-name,.vente-buyer{max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+.vente-buyer{white-space:normal;line-height:1.35;overflow-wrap:anywhere;}
+.vente-right{max-width:128px;min-width:92px;}
+.vente-right .badge{display:block!important;max-width:128px;white-space:normal!important;overflow-wrap:anywhere;word-break:break-word;line-height:1.25;text-align:center;}
+@media (max-width:390px){.annonce-info{padding-right:96px;}.annonce-right{width:92px;}.annonce-actions{grid-template-columns:repeat(2,32px);}.annonce-actions .btn-sm{width:32px;height:32px;}.vente-right{max-width:112px;min-width:84px;}.vente-right .badge{max-width:112px;}}
+
+
+
+/* PATCH v10 - switch connexion + affichage accessible */
+.auth-theme-toggle{
+  position:fixed;
+  left:50%;
+  bottom:calc(var(--safe-bottom) + 16px);
+  transform:translateX(-50%);
+  z-index:650;
+  display:none;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  color:var(--text);
+  font-size:12px;
+  font-weight:700;
+  font-family:'Instrument Sans',sans-serif;
+  white-space:nowrap;
+}
+.auth-screen.open .auth-theme-toggle{display:flex;}
+.auth-theme-toggle .theme-word{min-width:46px;text-align:center;color:var(--muted);font-size:11px;font-family:'DM Mono',monospace;}
+.theme-switch-btn{width:50px;height:28px;border:1px solid var(--border);border-radius:999px;background:var(--bg3);position:relative;cursor:pointer;padding:0;display:inline-flex;align-items:center;transition:background .2s,border-color .2s;}
+.theme-switch-btn::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:var(--teal);box-shadow:0 4px 12px rgba(0,0,0,.25);transition:transform .2s;}
+.theme-switch-btn.light::after{transform:translateX(22px);}
+.theme-switch-btn span{position:absolute;font-size:12px;line-height:1;}
+.theme-switch-btn .moon{left:7px;}
+.theme-switch-btn .sun{right:7px;}
+.auth-card{margin-bottom:42px;}
+
+/* Correction affichage annonces : prix + 4 actions restent accessibles */
+.annonce-row{
+  display:grid!important;
+  grid-template-columns:56px minmax(0,1fr) 64px!important;
+  gap:10px 12px!important;
+  align-items:start!important;
+  padding:16px 0!important;
+  min-height:0!important;
+  position:relative!important;
+}
+.annonce-thumb{grid-column:1;grid-row:1 / span 2;margin-top:0!important;width:48px!important;height:48px!important;}
+.annonce-info{grid-column:2;grid-row:1;min-width:0!important;padding-right:0!important;}
+.annonce-name{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25!important;max-width:100%!important;}
+.annonce-meta{white-space:normal!important;line-height:1.35!important;max-width:100%!important;}
+.annonce-link{margin-top:7px!important;max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;}
+.annonce-link a{display:inline-flex!important;align-items:center;max-width:100%!important;padding:6px 10px!important;border-radius:999px!important;background:rgba(0,180,166,.13)!important;color:var(--teal)!important;font-size:12px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;text-decoration:none!important;}
+.annonce-right{position:static!important;grid-column:3;grid-row:1;width:auto!important;text-align:right!important;display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:7px!important;}
+.annonce-price{font-size:17px!important;line-height:1.1!important;}
+.annonce-status{max-width:64px!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+.annonce-actions{grid-column:2 / 4!important;grid-row:2!important;display:grid!important;grid-template-columns:repeat(4,minmax(38px,1fr))!important;gap:8px!important;margin-top:2px!important;justify-content:stretch!important;width:100%!important;max-width:100%!important;}
+.annonce-actions .btn-sm{width:100%!important;height:42px!important;padding:0!important;justify-content:center!important;align-items:center!important;border-radius:12px!important;font-size:17px!important;}
+.annonce-actions .badge{grid-column:auto!important;justify-self:auto!important;max-width:none!important;}
+
+/* Correction ventes : les statuts longs ne sortent plus de l'écran */
+.vente-row{display:grid!important;grid-template-columns:48px minmax(0,1fr) 76px!important;gap:10px!important;align-items:start!important;min-width:0!important;}
+.vente-thumb{grid-column:1;width:44px!important;height:44px!important;}
+.vente-info{grid-column:2;min-width:0!important;overflow:hidden!important;}
+.vente-name{max-width:100%!important;white-space:normal!important;line-height:1.25!important;overflow:hidden!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;}
+.vente-buyer{max-width:100%!important;white-space:normal!important;line-height:1.25!important;overflow-wrap:anywhere!important;}
+.vente-right{grid-column:3;max-width:76px!important;min-width:0!important;width:76px!important;text-align:right!important;}
+.vente-right .badge,.vente-status-short{display:inline-block!important;max-width:76px!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.15!important;font-size:9px!important;padding:3px 5px!important;text-align:center!important;}
+
+@media (max-width:390px){
+  .annonce-row{grid-template-columns:50px minmax(0,1fr) 56px!important;gap:8px 10px!important;}
+  .annonce-thumb{width:44px!important;height:44px!important;}
+  .annonce-price{font-size:16px!important;}
+  .annonce-status{max-width:56px!important;}
+  .annonce-actions{gap:6px!important;grid-template-columns:repeat(4,minmax(34px,1fr))!important;}
+  .annonce-actions .btn-sm{height:38px!important;font-size:15px!important;}
+  .vente-row{grid-template-columns:44px minmax(0,1fr) 68px!important;gap:8px!important;}
+  .vente-right{width:68px!important;max-width:68px!important;}
+  .vente-right .badge,.vente-status-short{max-width:68px!important;font-size:8.5px!important;}
+}
+
+
+/* SUPABASE ACCESS / ADMIN */
+.access-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px;text-align:center;margin:10px 0;}
+.access-card h3{font-family:'Syne',sans-serif;font-size:18px;margin-bottom:8px;}
+.access-card p{color:var(--muted);font-size:13px;line-height:1.55;margin-bottom:12px;}
+.admin-table{display:flex;flex-direction:column;gap:8px;max-height:60dvh;overflow:auto;}
+.admin-user{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;}
+.admin-user-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px;}
+.admin-email{font-weight:700;font-size:13px;word-break:break-all;}
+.admin-meta{font-size:11px;color:var(--muted);line-height:1.5;font-family:'DM Mono',monospace;}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.supabase-badge{font-size:10px;color:var(--teal);font-family:'DM Mono',monospace;margin-top:5px;}
+.btn-admin{margin-top:8px;}
+
+
+/* SUBSCRIPTION v22 */
+.subscription-card{background:linear-gradient(180deg,rgba(0,180,166,.10),rgba(0,180,166,.03));border:1px solid rgba(0,180,166,.28);border-radius:18px;padding:16px;margin-bottom:12px;}
+.subscription-price{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--teal);margin:6px 0;}
+.subscription-price span{font-size:13px;color:var(--muted);font-family:'Instrument Sans',sans-serif;font-weight:500;}
+.subscription-list{display:flex;flex-direction:column;gap:8px;margin:12px 0;}
+.subscription-li{font-size:13px;color:var(--text);display:flex;gap:8px;align-items:flex-start;line-height:1.35;}
+.trial-note{font-size:12px;color:var(--warning);line-height:1.45;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.22);border-radius:12px;padding:10px;margin:10px 0;}
+
+</style>
+</head>
+<body>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen open" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">Vestiaire<span>Pro</span></div>
+    <div class="auth-sub">Crée un compte ou connecte-toi pour retrouver tes données sur PC, iPhone et Android.</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="authLoginTab" onclick="setAuthMode('login')">Connexion</button>
+      <button class="auth-tab" id="authRegisterTab" onclick="setAuthMode('register')">Créer un compte</button>
+    </div>
+    <div class="form-group" id="authNameGroup" style="display:none"><label class="form-label">Prénom / pseudo</label><input class="form-input" id="authName" placeholder="Ex : Hugo" autocomplete="name"></div>
+    <div class="form-group"><label class="form-label">Adresse mail</label><input class="form-input" id="authEmail" type="email" placeholder="tonmail@example.com" autocomplete="email"></div>
+    <div class="form-group"><label class="form-label">Mot de passe</label><div class="password-wrap"><input class="form-input" id="authPassword" type="password" placeholder="Minimum 6 caractères" autocomplete="current-password"><button class="password-eye" type="button" onclick="togglePassword('authPassword',this)" aria-label="Afficher le mot de passe">👁</button></div></div>
+    <div class="form-group" id="authPassword2Group" style="display:none"><label class="form-label">Confirmer le mot de passe</label><div class="password-wrap"><input class="form-input" id="authPassword2" type="password" placeholder="Retape le mot de passe" autocomplete="new-password"><button class="password-eye" type="button" onclick="togglePassword('authPassword2',this)" aria-label="Afficher le mot de passe">👁</button></div></div>
+    <div class="auth-error" id="authError" aria-live="polite"></div>
+    <button class="btn btn-primary btn-full" id="authSubmitBtn" onclick="authSubmit()">Se connecter</button>
+    <div class="auth-foot">Version locale : chaque compte a ses données sur cet appareil/navigateur. N’utilise pas ton mot de passe Vinted.</div>
+  </div>
+</div>
+
+
+
+<!-- SUPABASE ACCESS BLOCKER -->
+<div class="auth-screen" id="accessScreen">
+  <div class="auth-card">
+    <div class="auth-logo">Vestiaire<span>Pro</span></div>
+    <div class="access-card">
+      <h3 id="accessTitle">Accès terminé</h3>
+      <p id="accessMessage">Ton essai gratuit de 24h est terminé.</p>
+      <button class="btn btn-primary btn-full" onclick="openModal('modalSubscribe')">Choisir l’abonnement 4,99€/mois</button>
+      <button class="btn btn-full" style="margin-top:8px" onclick="logout()">Se déconnecter</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL ABONNEMENT v22 -->
+<div class="modal-overlay" id="modalSubscribe">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">Abonnement VestiairePro</span>
+      <button class="btn btn-sm" onclick="closeModal('modalSubscribe')">✕</button>
+    </div>
+
+    <div class="subscription-card">
+      <div class="badge badge-teal">Accès complet</div>
+      <div class="subscription-price">4,99€ <span>/ mois</span></div>
+      <div class="trial-note">Ton essai est gratuit pendant 1 jour seulement. Après 24h, l’accès complet nécessite l’abonnement.</div>
+      <div class="subscription-list">
+        <div class="subscription-li">✅ Suivi des annonces, ventes, revenus et statistiques</div>
+        <div class="subscription-li">✅ Données synchronisées entre PC, iPhone et Android</div>
+        <div class="subscription-li">✅ Import / actualisation des données</div>
+        <div class="subscription-li">✅ Notifications et tableau de bord complet</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="startSubscription()">Choisir l’abonnement 4,99€/mois</button>
+      <button class="btn btn-full" style="margin-top:8px" onclick="closeModal('modalSubscribe')">Continuer l’essai gratuit</button>
+    </div>
+
+    <p class="mini-note">Paiement sécurisé via Stripe. Si tu viens de payer et que l’accès ne se met pas à jour, reconnecte-toi ou contacte l’admin.</p>
+  </div>
+</div>
+
+<!-- MODAL ADMIN SUPABASE -->
+<div class="modal-overlay" id="modalAdmin">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">Admin — utilisateurs</span>
+      <button class="btn btn-sm" onclick="closeModal('modalAdmin')">✕</button>
+    </div>
+    <div class="alert alert-info"><span>ℹ️</span><div class="alert-text">Liste des utilisateurs, statut de l’essai 24h et accès à bloquer/débloquer.</div></div>
+    <button class="btn btn-primary btn-full" onclick="loadAdminUsers()">🔄 Actualiser la liste</button>
+    <div id="adminUsersList" class="admin-table" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- FAB -->
+<div class="fab" id="fab" onclick="onFab()">＋</div>
+
+<!-- MODAL ONBOARDING / COMPTE -->
+<div class="modal-overlay" id="modalOnboarding">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="onboarding-logo">Vestiaire<span>Pro</span></div>
+    <div style="text-align:center;color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:18px">
+      Crée ton compte local pour commencer. Tes données restent enregistrées uniquement sur ton appareil.
+    </div>
+    <div class="form-group"><label class="form-label">Prénom / pseudo *</label><input class="form-input" id="oNom" placeholder="Ex : Hugo" autocomplete="off"></div>
+    <div class="form-group"><label class="form-label">Pseudo de vente</label><input class="form-input" id="oPseudo" placeholder="@ton_pseudo" autocomplete="off"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Objectif revenus (€)</label><input class="form-input" id="oObjRevenu" type="number" inputmode="decimal" placeholder="500"></div>
+      <div class="form-group"><label class="form-label">Objectif ventes</label><input class="form-input" id="oObjVentes" type="number" inputmode="numeric" placeholder="20"></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="finishOnboarding()">Créer mon compte</button>
+    <button class="btn btn-full" style="margin-top:8px" onclick="closeModal('modalOnboarding')">Plus tard</button>
+  </div>
+</div>
+
+<!-- MODAL ANNONCE -->
+<div class="modal-overlay" id="modalAnnonce">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title" id="modalAnnonceTitle">Nouvelle annonce</span>
+      <button class="btn btn-sm" onclick="closeModal('modalAnnonce')">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Titre *</label><input class="form-input" id="fTitre" placeholder="Ex : Robe Zara fleurie S" autocomplete="off"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Prix (€) *</label><input class="form-input" id="fPrix" type="number" inputmode="decimal" placeholder="25"></div>
+      <div class="form-group"><label class="form-label">Taille</label><input class="form-input" id="fTaille" placeholder="S, M, T38..."></div>
+    </div>
+    <div class="form-group"><label class="form-label">Catégorie</label>
+      <select class="form-select" id="fCat">
+        <option>👗 Robes & Jupes</option><option>👟 Chaussures</option><option>👜 Sacs & Accessoires</option>
+        <option>🧥 Manteaux</option><option>💍 Bijoux</option><option>👕 Tops & Tee-shirts</option>
+        <option>👖 Pantalons & Jeans</option><option>🧣 Écharpes & Bonnets</option><option>📦 Autre</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">État</label>
+        <select class="form-select" id="fEtat"><option>Neuf avec étiquette</option><option>Neuf sans étiquette</option><option>Très bon état</option><option>Bon état</option><option>Satisfaisant</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Statut</label>
+        <select class="form-select" id="fStatut"><option value="Actif">Actif</option><option value="Vendu">Vendu</option><option value="Inactif">Inactif</option><option value="Réservé">Réservé</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Vues</label><input class="form-input" id="fVues" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Favoris / likes</label><input class="form-input" id="fFavoris" type="number" inputmode="numeric" placeholder="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Messages reçus</label><input class="form-input" id="fMessages" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Lien de l’article</label><input class="form-input" id="fLien" type="url" placeholder="https://..." autocomplete="off"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('modalAnnonce')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAnnonce()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VENTE -->
+<div class="modal-overlay" id="modalVente">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">Ajouter une vente</span>
+      <button class="btn btn-sm" onclick="closeModal('modalVente')">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Article vendu *</label><input class="form-input" id="vTitre" placeholder="Ex : Robe Zara S" autocomplete="off"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Prix (€) *</label><input class="form-input" id="vPrix" type="number" inputmode="decimal" placeholder="25"></div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="vDate" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Acheteur</label><input class="form-input" id="vAcheteur" placeholder="@pseudo" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Livraison</label>
+        <select class="form-select" id="vStatut"><option>Livré</option><option>Expédié</option><option>En transit</option><option>En attente</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Catégorie</label>
+      <select class="form-select" id="vCat">
+        <option>👗 Robes & Jupes</option><option>👟 Chaussures</option><option>👜 Sacs & Accessoires</option>
+        <option>🧥 Manteaux</option><option>💍 Bijoux</option><option>👕 Tops & Tee-shirts</option>
+        <option>👖 Pantalons & Jeans</option><option>📦 Autre</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('modalVente')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveVente()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADD CHOICE -->
+<div class="modal-overlay" id="modalAddChoice">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title">Comment veux-tu remplir VestiairePro ?</div>
+    <p class="add-choice-intro">
+      Choisis selon ton volume de vente. Si tu as beaucoup d’articles, l’import est plus rapide. Si tu vends peu, l’ajout manuel est souvent plus simple.
+    </p>
+
+    <div class="seller-choice-list">
+      <div class="seller-choice-card recommended">
+        <div class="seller-choice-head">
+          <div class="seller-choice-icon">📦</div>
+          <div>
+            <div class="seller-choice-title">Je vends beaucoup</div>
+            <div class="seller-choice-sub">Idéal si tu as déjà beaucoup d’annonces ou plusieurs ventes. VestiairePro récupère automatiquement annonces, ventes, vues, likes et messages quand ils sont présents dans ton export.</div>
+            <span class="seller-choice-badge">Le plus rapide</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="closeModal('modalAddChoice');openModal('modalImport')">📂 Importer mes données Vinted</button>
+      </div>
+
+      <div class="seller-choice-card">
+        <div class="seller-choice-head">
+          <div class="seller-choice-icon">✍️</div>
+          <div>
+            <div class="seller-choice-title">Je vends peu</div>
+            <div class="seller-choice-sub">Pratique si tu veux rentrer seulement quelques articles. Tu peux ajouter une annonce ou une vente en quelques secondes, sans fichier.</div>
+          </div>
+        </div>
+        <div class="actions-row manual-actions">
+          <div class="action-card" onclick="closeModal('modalAddChoice');openModalAdd()">
+            <div class="action-card-icon">🏷</div>
+            <div class="action-card-label">Ajouter une annonce</div>
+          </div>
+          <div class="action-card" onclick="closeModal('modalAddChoice');openModal('modalVente')">
+            <div class="action-card-icon">💰</div>
+            <div class="action-card-label">Ajouter une vente</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-choice-note">Tu pourras toujours importer ou ajouter manuellement plus tard avec le bouton +.</div>
+    <div style="height:8px"></div>
+    <button class="btn btn-full" onclick="closeModal('modalAddChoice')">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL IMPORT -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">📂 Importer / actualiser mes données</span>
+      <button class="btn btn-sm" onclick="closeModal('modalImport')">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6"><span style="color:var(--teal);font-weight:700">Sur Vinted</span> : va dans <strong style="color:var(--teal)">Paramètres → Confidentialité → Télécharger mes données</strong>.<br>Après la demande, va dans tes <strong style="color:var(--teal)">mails</strong>, télécharge le fichier <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;color:var(--teal)">.zip</code> reçu, puis reviens ici pour l’ajouter juste en dessous. VestiairePro récupère automatiquement annonces, ventes, vues, likes, messages et liens quand ils sont présents. Si tu importes un nouveau ZIP plus tard, les articles déjà présents sont actualisés au lieu d’être dupliqués.</p>
+    <div class="alert alert-info" style="margin-bottom:14px"><span style="font-size:15px">🔒</span><div class="alert-text">Le fichier est lu dans ton navigateur. Rien n’est envoyé sur un serveur.</div></div>
+    <div id="lastImportInfo" style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:center"></div>
+    <div class="import-zone" onclick="document.getElementById('csvInput').click()">
+      <div style="font-size:30px;margin-bottom:8px">📦</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Appuie pour envoyer ton fichier Vinted</div>
+      <div style="font-size:11px;color:var(--teal)">Export .zip Vinted accepté</div>
+    </div>
+    <input type="file" id="csvInput" accept=".zip,.csv,.html,.txt" style="display:none" onchange="handleCSV(this)">
+    <div id="importPreview" style="margin-top:12px"></div>
+    <div style="margin-top:14px">
+      <p style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center">— ou chargez des données de démo —</p>
+      <button class="btn btn-full" onclick="loadDemoData()">✨ Données de démonstration</button>
+    </div>
+    <div class="form-actions" style="margin-top:12px">
+      <button class="btn" style="flex:1;justify-content:center" onclick="closeModal('modalImport')">Fermer</button>
+      <button class="btn btn-primary" id="btnImportConfirm" onclick="confirmImport()" style="display:none;flex:1;justify-content:center">✅ Mettre à jour</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL NOTIFICATIONS -->
+<div class="modal-overlay" id="modalNotifications">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">🔔 Notifications reçues</span>
+      <button class="btn btn-sm" onclick="closeModal('modalNotifications')">✕</button>
+    </div>
+    <div id="notificationsList" class="notification-list"></div>
+    <button class="btn btn-full btn-danger" id="btnClearNotifications" style="margin-top:12px;display:none" onclick="clearNotifications()">🗑 Effacer les notifications</button>
+  </div>
+</div>
+
+<!-- MODAL FÉLICITATIONS / OBJECTIFS -->
+<div class="modal-overlay" id="modalSetupGoals">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div style="text-align:center;font-size:42px;margin-bottom:8px">🎉</div>
+    <div class="modal-title" style="text-align:center;margin-bottom:8px">Félicitations, tout est prêt !</div>
+    <p style="font-size:13px;color:var(--muted);text-align:center;line-height:1.5;margin-bottom:16px">Tes données sont ajoutées. Tu peux maintenant te fixer des objectifs pour suivre tes revenus et tes ventes du mois.</p>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Objectif revenus (€)</label><input class="form-input" id="gObjRevenu" type="number" inputmode="decimal" placeholder="Ex : 500"></div>
+      <div class="form-group"><label class="form-label">Objectif ventes</label><input class="form-input" id="gObjVentes" type="number" inputmode="numeric" placeholder="Ex : 20"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('modalSetupGoals')">Plus tard</button>
+      <button class="btn btn-primary" onclick="saveSetupGoals()">🎯 Enregistrer mes objectifs</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROFIL -->
+<div class="modal-overlay" id="modalProfil">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-close-row">
+      <span class="modal-title">Mon profil</span>
+      <button class="btn btn-sm" onclick="closeModal('modalProfil')">✕</button>
+    </div>
+
+    <div class="account-pill">Compte connecté<strong id="accountEmail">—</strong></div>
+    <div class="form-group"><label class="form-label">Prénom / Pseudo</label><input class="form-input" id="pNom" placeholder="Marie" autocomplete="off"></div>
+    <div class="form-group"><label class="form-label">Pseudo de vente</label><input class="form-input" id="pPseudo" placeholder="@marie_mode" autocomplete="off"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Objectif revenus (€)</label><input class="form-input" id="pObjRevenu" type="number" inputmode="decimal" placeholder="2000"></div>
+      <div class="form-group"><label class="form-label">Objectif ventes</label><input class="form-input" id="pObjVentes" type="number" inputmode="numeric" placeholder="50"></div>
+    </div>
+    <div class="section-label">🔔 Notifications</div>
+    <div class="card" style="padding:10px 14px;margin-bottom:12px">
+      <label class="check-row"><input type="checkbox" id="pNotifLikes"> Likes / favoris</label>
+      <label class="check-row"><input type="checkbox" id="pNotifMessages"> Messages reçus</label>
+      <label class="check-row"><input type="checkbox" id="pNotifVentes"> Ventes</label>
+      <button class="btn btn-sm btn-full" style="margin-top:8px" onclick="setNoNotifications()">Ne rien recevoir</button>
+    </div>
+    <div class="section-label">🎨 Apparence</div>
+    <div class="card" style="padding:10px 14px;margin-bottom:12px">
+      <label class="form-label" for="pTheme">Mode d’affichage</label>
+      <select class="form-select" id="pTheme">
+        <option value="dark">Mode sombre</option>
+        <option value="light">Mode clair</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('modalProfil')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProfil()">💾 Enregistrer</button>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <button class="btn btn-full btn-danger" onclick="confirmReset()">🗑 Réinitialiser toutes les données</button>
+      <button class="btn btn-full" style="margin-top:8px" onclick="logout()">🚪 Se déconnecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">Vestiaire<span>Pro</span></div>
+    <div class="topbar-right">
+      <div class="topbar-notif" onclick="openNotifications()" title="Notifications">
+        🔔<span class="notif-dot" id="topNotifDot"></span>
+      </div>
+      <div class="topbar-notif" onclick="openModal('modalImport')">
+        📂
+      </div>
+      <div class="topbar-avatar" id="avatarInitials" onclick="openProfil()">?</div>
+    </div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll-area" id="scrollArea">
+
+    <!-- PANEL: ACCUEIL -->
+    <div class="panel active" id="panel-home">
+      <div class="page-header">
+        <div class="page-title">Vue d'ensemble</div>
+        <div class="page-sub" id="overviewDate">Chargement...</div>
+      </div>
+
+      <div class="stats-2x2">
+        <div class="stat-card"><span class="stat-icon">💶</span><div class="stat-label">Revenus ce mois</div><div class="stat-value" style="color:var(--teal)" id="statRevenusMois">0€</div><div class="stat-change up" id="statRevenusChange">—</div></div>
+        <div class="stat-card"><span class="stat-icon">📦</span><div class="stat-label">Annonces actives</div><div class="stat-value" id="statAnnonces">0</div><div class="stat-change up">En ligne</div></div>
+        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Ventes ce mois</div><div class="stat-value" id="statVentesMois">0</div><div class="stat-change" id="statVentesChange">—</div></div>
+        <div class="stat-card"><span class="stat-icon">📊</span><div class="stat-label">Panier moyen</div><div class="stat-value" id="statPanier">0€</div><div class="stat-change up">Par vente</div></div>
+      </div>
+
+      <div class="alert alert-info" id="alerteImport"><span style="font-size:16px">💡</span><div class="alert-text"><strong>Bienvenue !</strong> Crée ton compte, importe ton export Vinted ou ajoute tes annonces manuellement.</div></div>
+      <div class="alert alert-info" id="privacyInfo"><span style="font-size:16px">🔒</span><div class="alert-text"><strong>Confidentialité :</strong> vos données sont enregistrées uniquement sur cet appareil. VestiairePro est un outil indépendant et non officiel.</div></div>
+      <div id="alertesContainer"></div>
+
+      <!-- Revenus période -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Revenus — <span id="revPeriodTitle">8 dernières semaines</span></span><span class="card-action" id="revPeriodTotal">0€</span></div>
+        <div class="tabs-scroll" id="revPeriodTabs" style="margin-bottom:10px">
+          <div class="tab" id="revTab-days" onclick="setRevenuePeriod('days',this)">Jours</div>
+          <div class="tab active" id="revTab-weeks" onclick="setRevenuePeriod('weeks',this)">Semaines</div>
+          <div class="tab" id="revTab-months" onclick="setRevenuePeriod('months',this)">Mois</div>
+        </div>
+        <div class="bar-chart" id="revChart" style="height:70px"></div>
+        <div class="bar-labels" id="revLabels"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Choisis Jours, Semaines ou Mois pour voir les revenus de la période.</div>
+      </div>
+
+      <!-- Perf -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Performance</span><span class="card-action" onclick="openProfil()">Objectifs →</span></div>
+        <div id="perfSection"><div style="color:var(--muted);font-size:12px;text-align:center;padding:8px">Ajoutez des données pour voir vos stats</div></div>
+      </div>
+
+      <!-- Dernières ventes -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Dernières ventes</span><span class="card-action" onclick="switchPanel('ventes',3)">Tout voir →</span></div>
+        <div id="lastVentes"><div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Aucune vente</div><div class="empty-sub">Ajoutez vos ventes ou importez vos données Vinted.</div></div></div>
+      </div>
+    </div>
+
+    <!-- PANEL: ANNONCES -->
+    <div class="panel" id="panel-annonces">
+      <div class="page-header">
+        <div class="page-title">Annonces</div>
+        <div class="page-sub" id="annoncesSub">Ensemble des annonces</div>
+      </div>
+
+      <div class="tabs-scroll" id="annonceTabs">
+        <div class="tab active" onclick="filterAnnonces('',this)">Toutes</div>
+        <div class="tab" onclick="filterAnnonces('Actif',this)">Actives</div>
+        <div class="tab" onclick="filterAnnonces('Inactif',this)">Inactives</div>
+        <div class="tab" onclick="filterAnnonces('Réservé',this)">Réservées</div>
+      </div>
+
+      <!-- Suggestions prix -->
+      <div class="card" id="cardPrixSuggestions" style="margin-bottom:12px">
+        <div class="card-header"><span class="card-title">✦ Suggestions de prix</span></div>
+        <div id="prixSuggestions"><div style="color:var(--muted);font-size:12px">Ajoutez des annonces pour recevoir des suggestions.</div></div>
+      </div>
+
+      <!-- Search -->
+      <div style="margin-bottom:12px">
+        <input type="text" id="searchAnnonces" placeholder="🔍 Rechercher une annonce..." oninput="renderAnnonces()" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:15px;outline:none;-webkit-appearance:none;">
+      </div>
+
+      <div class="card">
+        <div id="annoncesTable"><div class="empty"><div class="empty-icon">🏷</div><div class="empty-title">Aucune annonce</div><div class="empty-sub">Appuyez sur + pour ajouter votre première annonce.</div></div></div>
+      </div>
+    </div>
+
+    <!-- PANEL: VENTES -->
+    <div class="panel" id="panel-ventes">
+      <div class="page-header">
+        <div class="page-title">Mes ventes</div>
+        <div class="page-sub" id="ventesSub">Ensemble des ventes</div>
+      </div>
+      <div class="card">
+        <div id="ventesTable"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Aucune vente</div><div class="empty-sub">Ajoutez vos ventes ou importez vos données Vinted.</div></div></div>
+      </div>
+    </div>
+
+    <!-- PANEL: STATS -->
+    <div class="panel" id="panel-stats">
+      <div class="page-header">
+        <div class="page-title">Statistiques</div>
+        <div class="page-sub">Analyse de vos performances</div>
+      </div>
+
+      <div class="stats-2x2">
+        <div class="stat-card"><span class="stat-icon">💶</span><div class="stat-label">Total revenus</div><div class="stat-value" style="color:var(--teal)" id="statTotalRevenus">0€</div><div class="stat-change up">Depuis le début</div></div>
+        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Total ventes</div><div class="stat-value" id="statTotalVentes">0</div><div class="stat-change up">Depuis le début</div></div>
+        <div class="stat-card"><span class="stat-icon">📊</span><div class="stat-label">Panier moyen</div><div class="stat-value" id="statMoyenne">0€</div><div class="stat-change up">Par vente</div></div>
+        <div class="stat-card"><span class="stat-icon">📦</span><div class="stat-label">Annonces actives</div><div class="stat-value" id="statActives">0</div><div class="stat-change up">En ligne</div></div>
+      </div>
+
+      <!-- Revenus mensuels -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Revenus mensuels</span></div>
+        <div class="bar-chart" id="monthlyChart" style="height:90px"></div>
+        <div class="bar-labels" id="monthlyLabels"></div>
+      </div>
+
+      <!-- Objectifs -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Objectifs du mois</span><span class="card-action" onclick="openProfil()">Modifier</span></div>
+        <div id="objectifsSection"><div style="color:var(--muted);font-size:12px;text-align:center;padding:8px">Définissez vos objectifs dans votre profil.</div></div>
+      </div>
+
+      <!-- Top cats -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Top catégories</span></div>
+        <div id="topCatsStats"><div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Aucune donnée</div></div></div>
+      </div>
+
+      <!-- Ventes par jour -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Ventes par jour</span></div>
+        <div class="mini-bars" id="weekChart" style="height:60px"></div>
+        <div class="bar-labels" id="weekLabels"></div>
+        <div id="weekTip" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5"></div>
+      </div>
+
+      <!-- Export -->
+      <button class="btn btn-full" onclick="exportCSV()" style="margin-bottom:8px">⬓ Exporter toutes mes données (CSV)</button>
+    </div>
+
+    <!-- PANEL: MESSAGES -->
+    <div class="panel" id="panel-messages">
+      <div class="page-header">
+        <div class="page-title">Messages</div>
+        <div class="page-sub">Réponses automatiques & modèles</div>
+      </div>
+
+      <div class="alert alert-info"><span style="font-size:15px">ℹ️</span><div class="alert-text">VestiairePro est un outil indépendant : les messages des plateformes de vente ne sont pas accessibles ici. Utilisez les modèles ci-dessous pour répondre plus vite.</div></div>
+
+      <div class="section-label">⚡ Réponses automatiques</div>
+      <div class="card">
+        <div class="auto-row"><div><div class="auto-title">Disponibilité</div><div class="auto-trigger">"disponible", "encore dispo"</div></div><div class="toggle" onclick="this.classList.toggle('off')"></div></div>
+        <div class="auto-row"><div><div class="auto-title">Délai de livraison</div><div class="auto-trigger">"livraison", "envoi", "délai"</div></div><div class="toggle" onclick="this.classList.toggle('off')"></div></div>
+        <div class="auto-row" style="margin-bottom:0"><div><div class="auto-title">Réduction lots</div><div class="auto-trigger">"lot", "bundle", "remise"</div></div><div class="toggle off" onclick="this.classList.toggle('off')"></div></div>
+      </div>
+
+      <div class="section-label">📋 Modèles à copier</div>
+      <div class="msg-template">
+        <div class="msg-template-header"><span class="msg-template-title">🤝 Négociation refusée</span><button class="btn btn-sm" onclick="copyMsg(this,'Merci pour votre intérêt ! Le prix est ferme car l\'article est en excellent état. N\'hésitez pas si vous changez d\'avis 😊')">Copier</button></div>
+        <div class="msg-template-text">Merci pour votre intérêt ! Le prix est ferme car l'article est en excellent état. N'hésitez pas si vous changez d'avis 😊</div>
+      </div>
+      <div class="msg-template">
+        <div class="msg-template-header"><span class="msg-template-title">📦 Envoi confirmé</span><button class="btn btn-sm" onclick="copyMsg(this,'Votre colis a été expédié ! Vous recevrez un numéro de suivi bientôt. Bonne réception 🎉')">Copier</button></div>
+        <div class="msg-template-text">Votre colis a été expédié ! Vous recevrez un numéro de suivi bientôt. Bonne réception 🎉</div>
+      </div>
+      <div class="msg-template">
+        <div class="msg-template-header"><span class="msg-template-title">⭐ Demander un avis</span><button class="btn btn-sm" onclick="copyMsg(this,'Bonjour ! J\'espère que l\'article vous plaît. Un avis m\'aiderait beaucoup. Merci et à bientôt !')">Copier</button></div>
+        <div class="msg-template-text">Bonjour ! J'espère que l'article vous plaît. Un avis m'aiderait beaucoup. Merci et à bientôt !</div>
+      </div>
+      <div class="msg-template" style="margin-bottom:0">
+        <div class="msg-template-header"><span class="msg-template-title">🔄 Article réservé</span><button class="btn btn-sm" onclick="copyMsg(this,'Bonjour, cet article est actuellement réservé. Je vous contacte si la vente ne se conclut pas !')">Copier</button></div>
+        <div class="msg-template-text">Bonjour, cet article est actuellement réservé. Je vous contacte si la vente ne se conclut pas !</div>
+      </div>
+    </div>
+
+  </div><!-- end scroll-area -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-btn active" id="nav-home" onclick="switchPanel('home',0)">
+      <span class="nav-btn-icon">⬡</span>
+      <span class="nav-btn-label">Accueil</span>
+    </div>
+    <div class="nav-btn" id="nav-annonces" onclick="switchPanel('annonces',1)">
+      <span class="nav-btn-icon">🏷</span>
+      <span class="nav-btn-label">Annonces</span>
+      <span class="nav-btn-badge" id="badgeAnnonces" style="display:none">0</span>
+    </div>
+    <div class="nav-btn" id="nav-ventes" onclick="switchPanel('ventes',2)">
+      <span class="nav-btn-icon">💰</span>
+      <span class="nav-btn-label">Ventes</span>
+      <span class="nav-btn-badge" id="badgeVentes" style="display:none">0</span>
+    </div>
+    <div class="nav-btn" id="nav-stats" onclick="switchPanel('stats',3)">
+      <span class="nav-btn-icon">◈</span>
+      <span class="nav-btn-label">Stats</span>
+    </div>
+    <div class="nav-btn" id="nav-messages" onclick="switchPanel('messages',4)">
+      <span class="nav-btn-icon">✉</span>
+      <span class="nav-btn-label">Messages</span>
+    </div>
+  </nav>
+</div><!-- end app -->
+
+<script>
+// ===================== DATA =====================
+const DEFAULT_PROFIL={nom:'',pseudo:'',objRevenu:0,objVentes:0,notifLikes:true,notifMessages:true,notifVentes:true,theme:'dark'};
+const SUPABASE_TABLE=(window.VESTIAIREPRO_SUPABASE_TABLE||'vp_user_data').trim();
+let supabaseClient=null;
+let currentUserEmail='';
+let currentUserId='';
+let authMode='login';
+let saveTimer=null;
+let DB={profil:{...DEFAULT_PROFIL},annonces:[],ventes:[],meta:{lastImport:'',notifications:[]}};
+let importBuffer=[],importType='annonces',editingId=null,currentFilter='';
+const ICONS={'👗 Robes & Jupes':'👗','👟 Chaussures':'👟','👜 Sacs & Accessoires':'👜','🧥 Manteaux':'🧥','💍 Bijoux':'💍','👕 Tops & Tee-shirts':'👕','👖 Pantalons & Jeans':'👖','🧣 Écharpes & Bonnets':'🧣','📦 Autre':'📦'};
+function gi(c){return ICONS[c]||'📦';}
+function emptyDB(){return {profil:{...DEFAULT_PROFIL},annonces:[],ventes:[],meta:{lastImport:'',notifications:[]}};}
+function dataKey(email){return 'vestiairepro_v7_backup_'+String(email||'').toLowerCase();}
+function normalizeDB(){
+  DB=DB||{};
+  DB.profil={...DEFAULT_PROFIL,...(DB.profil||{})};
+  DB.annonces=(DB.annonces||[]).map(a=>({messages:0,lien:'',...a}));
+  DB.ventes=DB.ventes||[];
+  DB.meta={lastImport:'',notifications:[],...(DB.meta||{})};
+  DB.meta.notifications=(DB.meta.notifications||[]).map(n=>({id:n.id||String(Date.now()),type:n.type||'info',message:n.message||n.msg||'',date:n.date||new Date().toISOString(),read:!!n.read})).filter(n=>n.message);
+}
+function getSupabaseUrl(){return String(window.VESTIAIREPRO_SUPABASE_URL||'').trim();}
+function getSupabaseAnonKey(){return String(window.VESTIAIREPRO_SUPABASE_ANON_KEY||'').trim();}
+function isSupabaseConfigured(){
+  const url=getSupabaseUrl(), key=getSupabaseAnonKey();
+  return /^https:\/\/[^\s]+\.supabase\.co\/?$/.test(url) && key.length>50 && !url.includes('TON-PROJET') && !key.includes('COLLE_TA_CLE');
+}
+function initSupabase(){
+  if(supabaseClient)return true;
+  if(!isSupabaseConfigured() || !window.supabase)return false;
+  supabaseClient=window.supabase.createClient(getSupabaseUrl(),getSupabaseAnonKey(),{
+    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+  });
+  return true;
+}
+function saveLocalBackup(){
+  if(!currentUserEmail)return;
+  try{localStorage.setItem(dataKey(currentUserEmail),JSON.stringify(DB));}catch(e){}
+}
+function save(){
+  normalizeDB();
+  saveLocalBackup();
+  if(!currentUserId || !supabaseClient)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{saveRemote();},700);
+}
+async function saveRemote(){
+  if(!currentUserId || !supabaseClient)return;
+  normalizeDB();
+  saveLocalBackup();
+  const payload={user_id:currentUserId,email:currentUserEmail,data:DB,updated_at:new Date().toISOString()};
+  const {error}=await supabaseClient.from(SUPABASE_TABLE).upsert(payload,{onConflict:'user_id'});
+  if(error){console.error('Erreur sauvegarde Supabase',error);notify('⚠️ Sauvegarde en ligne impossible',true);}
+}
+async function load(){
+  DB=emptyDB();
+  if(!currentUserId || !supabaseClient){normalizeDB();return;}
+  const {data,error}=await supabaseClient.from(SUPABASE_TABLE).select('data').eq('user_id',currentUserId).maybeSingle();
+  if(error){
+    console.error('Erreur chargement Supabase',error);
+    try{const backup=localStorage.getItem(dataKey(currentUserEmail));if(backup)DB=JSON.parse(backup);}catch(e){}
+    normalizeDB();
+    notify('⚠️ Chargement en ligne impossible, copie locale utilisée',true);
+    return;
+  }
+  if(data&&data.data){DB=data.data;normalizeDB();saveLocalBackup();return;}
+  // Nouveau compte : on crée la ligne en ligne avec une base vide.
+  DB=emptyDB();
+  const displayName=(currentUserEmail||'').split('@')[0]||'';
+  if(!DB.profil.nom)DB.profil.nom=displayName;
+  normalizeDB();
+  await saveRemote();
+}
+function setAuthMode(mode){
+  authMode=mode;
+  clearAuthError();
+  document.getElementById('authLoginTab').classList.toggle('active',mode==='login');
+  document.getElementById('authRegisterTab').classList.toggle('active',mode==='register');
+  document.getElementById('authNameGroup').style.display=mode==='register'?'block':'none';
+  document.getElementById('authPassword2Group').style.display=mode==='register'?'block':'none';
+  document.getElementById('authSubmitBtn').textContent=mode==='register'?'Créer mon compte':'Se connecter';
+}
+function showAuth(){applyTheme('dark');clearAuthError();document.getElementById('authScreen').classList.add('open');setAuthMode(authMode||'login');}
+function hideAuth(){document.getElementById('authScreen').classList.remove('open');}
+function validEmail(email){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);}
+function showAuthError(msg){const el=document.getElementById('authError');if(!el)return;el.textContent=msg;el.classList.add('show');}
+function clearAuthError(){const el=document.getElementById('authError');if(!el)return;el.textContent='';el.classList.remove('show');}
+function togglePassword(inputId,btn){const input=document.getElementById(inputId);if(!input)return;const show=input.type==='password';input.type=show?'text':'password';if(btn){btn.textContent=show?'🙈':'👁';btn.setAttribute('aria-label',show?'Masquer le mot de passe':'Afficher le mot de passe');}input.focus();}
+function applyTheme(theme){
+  const mode=theme==='light'?'light':'dark';
+  document.body.classList.toggle('light-mode',mode==='light');
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',mode==='light'?'#F6F7FB':'#0D0F14');
+}
+function signInErrorMessage(error){
+  const msg=(error&&error.message?error.message:'').toLowerCase();
+  if(msg.includes('email not confirmed'))return 'Ton adresse mail n’est pas encore confirmée. Vérifie ta boîte mail puis réessaie.';
+  if(msg.includes('invalid login credentials'))return 'Adresse mail ou mot de passe incorrect. Vérifie ton adresse et ton mot de passe.';
+  if(msg.includes('fetch'))return 'Connexion impossible : vérifie Internet et la configuration Supabase.';
+  return 'Connexion impossible : '+(error&&error.message?error.message:'erreur inconnue');
+}
+function signUpErrorMessage(error){
+  const msg=(error&&error.message?error.message:'').toLowerCase();
+  if(msg.includes('already') || msg.includes('registered'))return 'Un compte existe déjà avec cette adresse. Essaie de te connecter.';
+  if(msg.includes('password'))return 'Mot de passe refusé. Mets au moins 6 caractères.';
+  return 'Création impossible : '+(error&&error.message?error.message:'erreur inconnue');
+}
+async function finishAuth(user,displayName,created){
+  if(!user)throw new Error('Utilisateur introuvable');
+  currentUserId=user.id;
+  currentUserEmail=String(user.email||'').toLowerCase();
+  await load();
+  if(created){
+    DB.profil.nom=(displayName||DB.profil.nom||currentUserEmail.split('@')[0]||'Mon profil').trim();
+    await saveRemote();
+  }
+  applyTheme(DB.profil.theme);
+  hideAuth();
+  refreshAll();
+  maybeOpenOnboarding();
+}
+async function authSubmit(){
+  clearAuthError();
+  const btn=document.getElementById('authSubmitBtn');
+  const email=document.getElementById('authEmail').value.trim().toLowerCase();
+  const password=document.getElementById('authPassword').value;
+  const password2=document.getElementById('authPassword2').value;
+  const name=document.getElementById('authName').value.trim();
+  if(!validEmail(email)){showAuthError('Adresse mail invalide. Vérifie l’écriture de ton adresse.');notify('⚠️ Adresse mail invalide',true);document.getElementById('authEmail').focus();return;}
+  if(password.length<6){showAuthError('Mot de passe trop court : 6 caractères minimum.');notify('⚠️ Mot de passe : 6 caractères minimum',true);document.getElementById('authPassword').focus();return;}
+  if(!initSupabase()){showAuthError('Supabase n’est pas configuré. Ouvre config.js et colle ton URL Supabase + ta clé anon.');notify('⚠️ Supabase non configuré',true);return;}
+  btn.disabled=true;btn.textContent=authMode==='register'?'Création...':'Connexion...';
+  try{
+    if(authMode==='register'){
+      if(password!==password2){showAuthError('Les deux mots de passe ne correspondent pas.');notify('⚠️ Les mots de passe ne correspondent pas',true);document.getElementById('authPassword2').focus();return;}
+      const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:name||email.split('@')[0]}}});
+      if(error){showAuthError(signUpErrorMessage(error));notify('⚠️ Création impossible',true);return;}
+      if(!data.session){
+        setAuthMode('login');
+        showAuthError('Compte créé. Vérifie ton email de confirmation, puis reconnecte-toi.');
+        notify('📩 Vérifie ton email');
+        return;
+      }
+      await finishAuth(data.user,name||email.split('@')[0],true);
+      notify('✅ Compte créé et synchronisé');
+      return;
+    }
+    const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
+    if(error){showAuthError(signInErrorMessage(error));notify('⚠️ Connexion refusée',true);document.getElementById('authEmail').focus();return;}
+    await finishAuth(data.user,'',false);
+    notify('✅ Connecté');
+  }catch(e){console.error(e);showAuthError('Erreur : '+(e.message||e));notify('⚠️ Erreur de connexion',true);}
+  finally{btn.disabled=false;btn.textContent=authMode==='register'?'Créer mon compte':'Se connecter';}
+}
+async function bootAuth(){
+  if(!initSupabase()){
+    currentUserEmail='';currentUserId='';DB=emptyDB();applyTheme('dark');showAuth();
+    showAuthError('Pour activer les mêmes comptes sur PC, iPhone et Android : crée Supabase, lance le fichier SQL fourni, puis remplis config.js.');
+    return;
+  }
+  const {data,error}=await supabaseClient.auth.getSession();
+  if(error){console.error(error);showAuth();showAuthError('Impossible de récupérer la session Supabase.');return;}
+  const session=data&&data.session;
+  if(session&&session.user){
+    currentUserId=session.user.id;
+    currentUserEmail=String(session.user.email||'').toLowerCase();
+    await load();
+    applyTheme(DB.profil.theme);
+    hideAuth();refreshAll();maybeOpenOnboarding();
+  }else{
+    currentUserEmail='';currentUserId='';DB=emptyDB();applyTheme('dark');showAuth();
+  }
+}
+async function logout(){
+  await saveRemote();
+  if(supabaseClient)await supabaseClient.auth.signOut();
+  currentUserEmail='';currentUserId='';DB=emptyDB();closeModal('modalProfil');showAuth();notify('Déconnecté');
+}
+
+// ===================== NOTIFY =====================
+function notify(msg,err){const n=document.getElementById('notif');n.textContent=msg;n.className='notif show'+(err?' error':'');setTimeout(()=>n.className='notif',3000);}
+
+// ===================== MODALS =====================
+function openModal(id){const el=document.getElementById(id);if(!el)return;el.classList.add('open');if(id==='modalImport')renderLastImportInfo();}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');if(id==='modalImport'){importBuffer=[];document.getElementById('importPreview').innerHTML='';document.getElementById('btnImportConfirm').style.display='none';}}
+function renderLastImportInfo(){const el=document.getElementById('lastImportInfo');if(!el)return;const d=DB.meta&&DB.meta.lastImport?new Date(DB.meta.lastImport):null;el.textContent=d?'Dernière actualisation : '+d.toLocaleString('fr-FR'):'Aucune actualisation pour ce compte.';}
+
+// ===================== FAB =====================
+function onFab(){openModal('modalAddChoice');}
+
+// ===================== PANEL NAV =====================
+let currentPanel='home';
+const panels=['home','annonces','ventes','stats','messages'];
+function switchPanel(name,idx){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  document.getElementById('scrollArea').scrollTop=0;
+  currentPanel=name;
+  if(name==='stats')renderStats();
+  if(name==='annonces')renderAnnonces();
+  if(name==='ventes')renderVentes();
+  if(name==='home')renderOverview();
+  // Show/hide FAB
+  document.getElementById('fab').style.display=(name==='messages')?'none':'flex';
+}
+
+// ===================== PROFIL =====================
+function openProfil(){document.getElementById('pNom').value=DB.profil.nom;document.getElementById('pPseudo').value=DB.profil.pseudo;document.getElementById('pObjRevenu').value=DB.profil.objRevenu||'';document.getElementById('pObjVentes').value=DB.profil.objVentes||'';openModal('modalProfil');}
+function saveProfil(){DB.profil.nom=document.getElementById('pNom').value.trim()||'Mon profil';DB.profil.pseudo=document.getElementById('pPseudo').value.trim();DB.profil.objRevenu=parseFloat(document.getElementById('pObjRevenu').value)||0;DB.profil.objVentes=parseInt(document.getElementById('pObjVentes').value)||0;save();updateSidebar();closeModal('modalProfil');notify('✅ Profil enregistré !');refreshAll();}
+function updateSidebar(){normalizeDB();applyTheme(DB.profil.theme);updateNotifDot();const nom=DB.profil.nom||(currentUserEmail?currentUserEmail.split('@')[0]:'?');document.getElementById('avatarInitials').textContent=nom.slice(0,2).toUpperCase();const now=new Date();document.getElementById('overviewDate').textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+(nom&&nom!=='?'?' · Bonjour '+nom+' 👋':'');}
+
+// ===================== ANNONCES =====================
+function openModalAdd(){editingId=null;document.getElementById('modalAnnonceTitle').textContent='Nouvelle annonce';['fTitre','fTaille','fVues','fFavoris'].forEach(id=>document.getElementById(id).value='');document.getElementById('fPrix').value='';document.getElementById('fCat').value='👗 Robes & Jupes';document.getElementById('fEtat').value='Très bon état';document.getElementById('fStatut').value='Actif';openModal('modalAnnonce');}
+function openModalEdit(id){const a=DB.annonces.find(x=>x.id===id);if(!a)return;editingId=id;document.getElementById('modalAnnonceTitle').textContent='Modifier';document.getElementById('fTitre').value=a.titre;document.getElementById('fPrix').value=a.prix;document.getElementById('fCat').value=a.cat;document.getElementById('fTaille').value=a.taille||'';document.getElementById('fEtat').value=a.etat||'Très bon état';document.getElementById('fVues').value=a.vues||0;document.getElementById('fFavoris').value=a.favoris||0;document.getElementById('fStatut').value=a.statut;openModal('modalAnnonce');}
+function saveAnnonce(){const titre=document.getElementById('fTitre').value.trim();const prix=parseFloat(document.getElementById('fPrix').value);if(!titre||isNaN(prix)){notify('⚠️ Titre et prix requis',true);return;}const a={id:editingId||Date.now().toString(),titre,prix,cat:document.getElementById('fCat').value,taille:document.getElementById('fTaille').value.trim(),etat:document.getElementById('fEtat').value,vues:parseInt(document.getElementById('fVues').value)||0,favoris:parseInt(document.getElementById('fFavoris').value)||0,statut:document.getElementById('fStatut').value,date:editingId?(DB.annonces.find(x=>x.id===editingId)||{}).date||new Date().toISOString():new Date().toISOString()};if(editingId){const i=DB.annonces.findIndex(x=>x.id===editingId);if(i>=0)DB.annonces[i]=a;}else{DB.annonces.unshift(a);}save();closeModal('modalAnnonce');notify(editingId?'✅ Annonce modifiée !':'✅ Annonce ajoutée !');refreshAll();}
+function deleteAnnonce(id){if(!confirm('Supprimer ?'))return;DB.annonces=DB.annonces.filter(x=>x.id!==id);save();notify('🗑 Supprimée');refreshAll();}
+function markSold(id){const a=DB.annonces.find(x=>x.id===id);if(!a)return;a.statut='Vendu';save();notify('✅ Marqué vendu');refreshAll();}
+
+// ===================== VENTES =====================
+function saveVente(){const titre=document.getElementById('vTitre').value.trim();const prix=parseFloat(document.getElementById('vPrix').value);if(!titre||isNaN(prix)){notify('⚠️ Article et prix requis',true);return;}const v={id:Date.now().toString(),titre,prix,date:document.getElementById('vDate').value||new Date().toISOString().split('T')[0],acheteur:document.getElementById('vAcheteur').value.trim()||'—',statut:document.getElementById('vStatut').value,cat:document.getElementById('vCat').value};DB.ventes.unshift(v);save();closeModal('modalVente');notify('✅ Vente enregistrée !');refreshAll();}
+function deleteVente(id){if(!confirm('Supprimer ?'))return;DB.ventes=DB.ventes.filter(x=>x.id!==id);save();notify('🗑 Supprimée');refreshAll();}
+
+// ===================== RENDER ANNONCES =====================
+function filterAnnonces(f,el){currentFilter=f;document.querySelectorAll('#annonceTabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderAnnonces();}
+function renderAnnonces(){
+  const search=(document.getElementById('searchAnnonces')?.value||'').toLowerCase();
+  const list=DB.annonces.filter(a=>{const mF=!currentFilter||a.statut===currentFilter;const mS=!search||a.titre.toLowerCase().includes(search);return mF&&mS;});
+  const n=DB.annonces.length,act=DB.annonces.filter(a=>a.statut==='Actif').length;
+  document.getElementById('annoncesSub').textContent=`${n} annonces · ${act} actives`;
+  const badge=document.getElementById('badgeAnnonces');badge.textContent=n;badge.style.display=n>0?'block':'none';
+  const el=document.getElementById('annoncesTable');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏷</div><div class="empty-title">Aucune annonce trouvée</div></div>';renderPrixSuggestions();return;}
+  el.innerHTML=list.map(a=>{
+    const age=Math.floor((Date.now()-new Date(a.date))/86400000);
+    const sc={Actif:'green',Vendu:'teal',Inactif:'red',Réservé:'yellow'}[a.statut]||'gray';
+    return`<div class="annonce-row">
+      <div class="annonce-thumb">${gi(a.cat)}</div>
+      <div class="annonce-info">
+        <div class="annonce-name">${a.titre}</div>
+        <div class="annonce-meta">${age}j · ${a.vues||0} vues · ${a.favoris||0} ♡</div>
+      </div>
+      <div class="annonce-right">
+        <div class="annonce-price">${a.prix}€</div>
+        <div class="annonce-actions">
+          <span class="badge badge-${sc}" style="font-size:9px">${a.statut}</span>
+          <button class="btn btn-sm" onclick="openModalEdit('${a.id}')">✏️</button>
+          ${a.statut==='Actif'?`<button class="btn btn-sm" onclick="markSold('${a.id}')">✔</button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="deleteAnnonce('${a.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  renderPrixSuggestions();
+}
+
+// ===================== RENDER VENTES =====================
+function renderVentes(){
+  const el=document.getElementById('ventesTable');
+  const n=DB.ventes.length;
+  const tot=DB.ventes.reduce((s,v)=>s+v.prix,0).toFixed(0);
+  document.getElementById('ventesSub').textContent=`${n} ventes · ${tot}€ total`;
+  const badge=document.getElementById('badgeVentes');badge.textContent=n;badge.style.display=n>0?'block':'none';
+  if(!n){el.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Aucune vente</div><div class="empty-sub">Ajoutez vos ventes ou importez vos données Vinted.</div></div>';return;}
+  el.innerHTML=DB.ventes.map(v=>{
+    const sc={Livré:'green',Expédié:'teal','En transit':'yellow','En attente':'gray'}[v.statut]||'gray';
+    return`<div class="vente-row">
+      <div class="vente-thumb">${gi(v.cat||'📦 Autre')}</div>
+      <div class="vente-info"><div class="vente-name">${v.titre}</div><div class="vente-buyer">${v.acheteur} · <span class="badge badge-${sc}" style="font-size:9px">${v.statut}</span></div></div>
+      <div class="vente-right"><div class="vente-price">${v.prix}€</div><div class="vente-date">${v.date||'—'}</div><button class="btn btn-sm btn-danger" style="margin-top:4px" onclick="deleteVente('${v.id}')">✕</button></div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== RENDER OVERVIEW =====================
+function renderOverview(){
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  const vm=DB.ventes.filter(v=>{const d=new Date(v.date);return d.getMonth()===m&&d.getFullYear()===y;});
+  const rev=vm.reduce((s,v)=>s+v.prix,0);
+  const tot=DB.ventes.length;
+  const pan=tot>0?(DB.ventes.reduce((s,v)=>s+v.prix,0)/tot).toFixed(0):0;
+  const act=DB.annonces.filter(a=>a.statut==='Actif').length;
+  document.getElementById('statRevenusMois').textContent=rev.toFixed(0)+'€';
+  document.getElementById('statAnnonces').textContent=act;
+  document.getElementById('statVentesMois').textContent=vm.length;
+  document.getElementById('statPanier').textContent=pan+'€';
+  const hasData=DB.annonces.length>0||DB.ventes.length>0;
+  document.getElementById('alerteImport').style.display=hasData?'none':'flex';
+  // Alertes
+  const alertes=[];
+  const sv=DB.annonces.filter(a=>a.statut==='Actif'&&a.vues===0);
+  if(sv.length)alertes.push(`<div class="alert alert-warn"><span style="font-size:15px">⚡</span><div class="alert-text"><strong>${sv.length} annonce(s)</strong> sans aucune vue.</div></div>`);
+  const vl=DB.annonces.filter(a=>a.statut==='Actif'&&Math.floor((Date.now()-new Date(a.date))/86400000)>14);
+  if(vl.length)alertes.push(`<div class="alert alert-warn"><span style="font-size:15px">📅</span><div class="alert-text"><strong>${vl.length} annonce(s)</strong> en ligne depuis +14 jours.</div></div>`);
+  document.getElementById('alertesContainer').innerHTML=alertes.join('');
+  // Perf
+  const conv=act>0?Math.round(vm.length/act*100):0;
+  const oR=DB.profil.objRevenu,oV=DB.profil.objVentes;
+  document.getElementById('perfSection').innerHTML=[
+    {l:'Conversion',v:conv,s:'%',c:'var(--teal)'},
+    {l:'Objectif revenus',v:oR>0?Math.min(100,Math.round(rev/oR*100)):0,s:'%',c:'var(--gold)',sub:oR>0?`${rev.toFixed(0)}€ / ${oR}€`:'Non défini'},
+    {l:'Objectif ventes',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
+  ].map(p=>`<div class="perf-row"><div class="perf-row-top"><span class="perf-row-label">${p.l}</span><span style="color:${p.c};font-family:'DM Mono',monospace;font-size:11px">${p.sub||p.v+p.s}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${p.v}%;background:linear-gradient(90deg,${p.c},${p.c}cc)"></div></div></div>`).join('');
+  // Last ventes
+  const lv=DB.ventes.slice(0,4);
+  if(!lv.length){document.getElementById('lastVentes').innerHTML='<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Aucune vente</div></div>';return;}
+  document.getElementById('lastVentes').innerHTML=lv.map(v=>{const sc={Livré:'green',Expédié:'teal','En transit':'yellow','En attente':'gray'}[v.statut]||'gray';return`<div class="vente-row"><div class="vente-thumb">${gi(v.cat||'📦 Autre')}</div><div class="vente-info"><div class="vente-name">${v.titre}</div><div class="vente-buyer">${v.acheteur}</div></div><div class="vente-right"><div class="vente-price">${v.prix}€</div><div class="vente-date">${v.date||'—'}</div><span class="badge badge-${sc}" style="margin-top:3px;display:block">${v.statut}</span></div></div>`;}).join('');
+  buildWeeklyChart();
+}
+
+// ===================== RENDER STATS =====================
+function renderStats(){
+  const tot=DB.ventes.reduce((s,v)=>s+v.prix,0);
+  const moy=DB.ventes.length>0?(tot/DB.ventes.length).toFixed(0):0;
+  const act=DB.annonces.filter(a=>a.statut==='Actif').length;
+  document.getElementById('statTotalRevenus').textContent=tot.toFixed(0)+'€';
+  document.getElementById('statTotalVentes').textContent=DB.ventes.length;
+  document.getElementById('statMoyenne').textContent=moy+'€';
+  document.getElementById('statActives').textContent=act;
+  // Objectifs
+  const now=new Date();
+  const vm=DB.ventes.filter(v=>{const d=new Date(v.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const rev=vm.reduce((s,v)=>s+v.prix,0);
+  const oR=DB.profil.objRevenu,oV=DB.profil.objVentes;
+  const dl=new Date(now.getFullYear(),now.getMonth()+1,0).getDate()-now.getDate();
+  document.getElementById('objectifsSection').innerHTML=(!oR&&!oV)?'<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px">Définissez vos objectifs dans votre profil.</div>':[oR>0?{l:'Revenus',cur:rev.toFixed(0)+'€',tgt:oR+'€',v:Math.min(100,Math.round(rev/oR*100)),rest:(oR-rev).toFixed(0)+'€ restants',c:'var(--teal)'}:null,oV>0?{l:'Ventes',cur:vm.length,tgt:oV,v:Math.min(100,Math.round(vm.length/oV*100)),rest:(oV-vm.length)+' ventes restantes',c:'var(--gold)'}:null].filter(Boolean).map(g=>`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>${g.l}</span><span style="font-family:'DM Mono',monospace">${g.cur} / ${g.tgt}</span></div><div class="progress-bar" style="height:8px"><div class="progress-fill" style="width:${g.v}%;background:linear-gradient(90deg,${g.c},${g.c}cc)"></div></div><div style="font-size:10px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace">${g.rest} · ${dl} jours</div></div>`).join('');
+  // Top cats
+  const cats={};DB.ventes.forEach(v=>{cats[v.cat||'📦 Autre']=(cats[v.cat||'📦 Autre']||0)+v.prix;});
+  const sorted=Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const max=sorted.length?sorted[0][1]:1;
+  document.getElementById('topCatsStats').innerHTML=sorted.length?sorted.map(([cat,r])=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${cat}</span><span style="color:var(--teal);font-family:'DM Mono',monospace">${r.toFixed(0)}€</span></div><div class="progress-bar"><div class="progress-fill" style="width:${Math.round(r/max*100)}%"></div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Aucune vente</div></div>';
+  buildMonthlyChart();
+  buildWeekDayChart();
+}
+
+// ===================== PRIX SUGGESTIONS =====================
+function renderPrixSuggestions(){
+  const cands=DB.annonces.filter(a=>a.statut==='Actif'&&Math.floor((Date.now()-new Date(a.date))/86400000)>10&&(a.vues||0)<50).slice(0,3);
+  const el=document.getElementById('prixSuggestions');
+  if(!cands.length){el.innerHTML='<div style="color:var(--muted);font-size:12px">Vos annonces se portent bien !</div>';return;}
+  el.innerHTML=cands.map(a=>{const age=Math.floor((Date.now()-new Date(a.date))/86400000);const sug=Math.round(a.prix*0.82);return`<div class="price-sug"><div class="price-sug-icon">${gi(a.cat)}</div><div class="price-sug-info"><div class="price-sug-name">${a.titre}</div><div class="price-sug-meta">${age}j · ${a.vues||0} vues</div></div><div class="price-sug-right"><span class="price-old">${a.prix}€</span><span style="color:var(--muted);font-size:11px">→</span><span class="price-new">${sug}€</span><button class="btn btn-sm btn-primary" onclick="applyPrice('${a.id}',${sug})">OK</button></div></div>`;}).join('');
+}
+function applyPrice(id,p){const a=DB.annonces.find(x=>x.id===id);if(!a)return;a.prix=p;save();notify('✅ Prix → '+p+'€');refreshAll();}
+
+// ===================== CHARTS =====================
+function buildWeeklyChart(){
+  const w=[],l=[];
+  for(let i=7;i>=0;i--){const s=new Date();s.setDate(s.getDate()-i*7-6);const e=new Date();e.setDate(e.getDate()-i*7+1);const r=DB.ventes.filter(v=>{const d=new Date(v.date);return d>=s&&d<=e;}).reduce((s,v)=>s+v.prix,0);w.push(r);l.push('S'+i);}
+  buildBarChart('revChart','revLabels',w,l,70);
+}
+function buildMonthlyChart(){
+  const now=new Date(),d=[],l=[];
+  for(let i=11;i>=0;i--){const m=(now.getMonth()-i+12)%12;const y=now.getFullYear()-(now.getMonth()<i?1:0);const r=DB.ventes.filter(v=>{const dd=new Date(v.date);return dd.getMonth()===m&&dd.getFullYear()===y;}).reduce((s,v)=>s+v.prix,0);d.push(r);l.push(['J','F','M','A','M','J','J','A','S','O','N','D'][m]);}
+  buildBarChart('monthlyChart','monthlyLabels',d,l,90);
+}
+function buildWeekDayChart(){
+  const days=[0,0,0,0,0,0,0];
+  DB.ventes.forEach(v=>{const d=new Date(v.date);days[d.getDay()]++;});
+  const r=[days[1],days[2],days[3],days[4],days[5],days[6],days[0]];
+  const lb=['L','M','M','J','V','S','D'];
+  const max=Math.max(...r,1);
+  const best=r.indexOf(Math.max(...r));
+  const c=document.getElementById('weekChart'),l=document.getElementById('weekLabels');
+  if(!c)return;c.innerHTML='';l.innerHTML='';
+  r.forEach((v,i)=>{const b=document.createElement('div');b.className='mini-bar'+(i===best?' best':'');b.style.height=(v/max*100)+'%';c.appendChild(b);const lb2=document.createElement('div');lb2.className='bar-label';lb2.textContent=lb[i];l.appendChild(lb2);});
+  const tip=document.getElementById('weekTip');
+  if(tip&&max>0)tip.innerHTML=`💡 <strong style="color:var(--text)">${['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'][best]}</strong> est votre meilleur jour de vente.`;
+}
+function buildBarChart(cId,lId,data,labels,h){
+  const max=Math.max(...data,1);
+  const c=document.getElementById(cId),l=document.getElementById(lId);
+  if(!c)return;c.innerHTML='';if(l)l.innerHTML='';c.style.height=h+'px';
+  data.forEach((v,i)=>{
+    const wrap=document.createElement('div');wrap.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;';
+    const bar=document.createElement('div');bar.className='bar'+(v===0?' empty':'');
+    bar.style.height=v>0?(v/max*100)+'%':'3px';
+    bar.title=v>0?v+'€':'—';
+    wrap.appendChild(bar);c.appendChild(wrap);
+    if(l){const lb=document.createElement('div');lb.className='bar-label';lb.textContent=labels[i];l.appendChild(lb);}
+  });
+}
+
+// ===================== CSV IMPORT =====================
+function setImportType(t){
+  importType=t;
+  const a=document.getElementById('importTypeAnnonces');
+  const v=document.getElementById('importTypeVentes');
+  if(a){
+    a.style.borderColor=t==='annonces'?'var(--teal)':'var(--border)';
+    a.style.color=t==='annonces'?'var(--teal)':'var(--text)';
+  }
+  if(v){
+    v.style.borderColor=t==='ventes'?'var(--teal)':'var(--border)';
+    v.style.color=t==='ventes'?'var(--teal)':'var(--text)';
+  }
+}
+function handleCSV(input){const f=input.files[0];if(f)parseCSV(f);}
+function parseCSV(file){const reader=new FileReader();reader.onload=function(e){const text=e.target.result;const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);if(lines.length<2){notify('⚠️ CSV vide',true);return;}const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').toLowerCase().trim());const preview=document.getElementById('importPreview');importBuffer=[];lines.slice(1).forEach((line,i)=>{const cols=parseCSVLine(line);const row={};headers.forEach((h,j)=>{row[h]=(cols[j]||'').replace(/"/g,'').trim();});try{if(importType==='annonces'){const obj={id:Date.now().toString()+i,titre:row['title']||row['titre']||row['article']||'Article '+i,prix:parseFloat(row['price']||row['prix']||row['price_amount']||0),cat:row['category']||row['categorie']||'📦 Autre',taille:row['size']||row['taille']||'',etat:row['condition']||row['etat']||'Bon état',vues:parseInt(row['views']||row['vues']||0)||0,favoris:parseInt(row['favourites']||row['favoris']||0)||0,statut:'Actif',date:row['created_at']||row['date']||new Date().toISOString()};importBuffer.push({ok:true,obj,label:`${obj.titre} — ${obj.prix}€`});}else{const obj={id:Date.now().toString()+i,titre:row['title']||row['titre']||row['item']||'Vente '+i,prix:parseFloat(row['total_amount']||row['price']||row['prix']||row['amount']||0),date:(row['created_at']||row['date']||'').split('T')[0]||new Date().toISOString().split('T')[0],acheteur:row['buyer']||row['acheteur']||row['username']||'—',statut:row['status']||row['statut']||'Livré',cat:row['category']||row['categorie']||'📦 Autre'};importBuffer.push({ok:true,obj,label:`${obj.titre} — ${obj.prix}€`});}}catch(ex){importBuffer.push({ok:false,label:'Erreur ligne '+(i+2)});}});const ok=importBuffer.filter(r=>r.ok);const err=importBuffer.filter(r=>!r.ok);preview.innerHTML=`<div style="font-size:12px;color:var(--text);margin-bottom:8px"><strong>${ok.length}</strong> valide(s) · <strong style="color:var(--coral)">${err.length}</strong> erreur(s)</div>`+importBuffer.slice(0,6).map(r=>`<div class="import-preview-row import-preview-${r.ok?'ok':'err'}">${r.ok?'✅':'❌'} ${r.label}</div>`).join('')+(importBuffer.length>6?`<div style="font-size:11px;color:var(--muted);margin-top:4px">... et ${importBuffer.length-6} autres</div>`:'');if(ok.length>0)document.getElementById('btnImportConfirm').style.display='inline-flex';};reader.readAsText(file,'UTF-8');}
+function parseCSVLine(line){const result=[];let cur='',inQ=false;for(let c of line){if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){result.push(cur);cur='';}else{cur+=c;}}result.push(cur);return result;}
+function confirmImport(){const vals=importBuffer.filter(r=>r.ok).map(r=>r.obj);if(importType==='annonces'){DB.annonces=[...vals,...DB.annonces];notify(`✅ ${vals.length} annonce(s) importée(s) !`);}else{DB.ventes=[...vals,...DB.ventes];notify(`✅ ${vals.length} vente(s) importée(s) !`);}save();closeModal('modalImport');refreshAll();}
+
+// ===================== DEMO DATA =====================
+function loadDemoData(){
+  const fmt=d=>d.toISOString().split('T')[0];
+  const ago=n=>{const d=new Date();d.setDate(d.getDate()-n);return fmt(d);};
+  DB.annonces=[
+    {id:'d1',titre:'Robe Sandro noire S',prix:89,cat:'👗 Robes & Jupes',taille:'S',etat:'Très bon état',vues:234,favoris:18,statut:'Actif',date:ago(2)},
+    {id:'d2',titre:'Nike Air Max 90 T38',prix:67,cat:'👟 Chaussures',taille:'38',etat:'Bon état',vues:156,favoris:9,statut:'Actif',date:ago(5)},
+    {id:'d3',titre:'Sac cuir Mango beige',prix:38,cat:'👜 Sacs & Accessoires',taille:'',etat:'Très bon état',vues:89,favoris:4,statut:'Actif',date:ago(8)},
+    {id:'d4',titre:'Manteau laine H&M M',prix:45,cat:'🧥 Manteaux',taille:'M',etat:'Bon état',vues:0,favoris:0,statut:'Actif',date:ago(25)},
+    {id:'d5',titre:'Collier doré vintage',prix:12,cat:'💍 Bijoux',taille:'',etat:'Très bon état',vues:0,favoris:0,statut:'Actif',date:ago(47)},
+    {id:'d6',titre:'Robe Zara bordeaux M',prix:35,cat:'👗 Robes & Jupes',taille:'M',etat:'Bon état',vues:22,favoris:1,statut:'Actif',date:ago(21)},
+  ];
+  DB.ventes=[];
+  const cats=['👗 Robes & Jupes','👟 Chaussures','👜 Sacs & Accessoires','🧥 Manteaux','💍 Bijoux'];
+  const titres=['Robe Zara fleurie','Escarpins T37','Tote bag cognac','Teddy jacket M','Boucles dorées','Top ASOS blanc','Jeans Levi\'s 501'];
+  const acheteurs=['@camille_m','@julie.w','@sarah_b','@lea_paris','@anna_k'];
+  for(let i=0;i<25;i++){const d=new Date();d.setDate(d.getDate()-Math.floor(Math.random()*90));DB.ventes.push({id:'dv'+i,titre:titres[i%titres.length],prix:Math.floor(8+Math.random()*75),date:fmt(d),acheteur:acheteurs[i%acheteurs.length],statut:['Livré','Livré','Livré','Expédié','En transit'][Math.floor(Math.random()*5)],cat:cats[i%cats.length]});}
+  DB.profil={nom:'Marie',pseudo:'@marie_mode',objRevenu:2000,objVentes:50};
+  save();closeModal('modalImport');notify('✅ Données de démo chargées !');refreshAll();
+}
+
+// ===================== EXPORT =====================
+function exportCSV(){if(!DB.annonces.length&&!DB.ventes.length){notify('⚠️ Aucune donnée',true);return;}let csv='Type,Titre,Prix,Catégorie,Statut,Date\n';DB.annonces.forEach(a=>{csv+=`annonce,"${a.titre}",${a.prix},"${a.cat}","${a.statut}","${a.date||''}"\n`;});csv+='\nType,Titre,Prix,Catégorie,Date,Acheteur,Statut\n';DB.ventes.forEach(v=>{csv+=`vente,"${v.titre}",${v.prix},"${v.cat||''}","${v.date||''}","${v.acheteur||''}","${v.statut||''}"\n`;});const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='VestiairePro_export.csv';a.click();URL.revokeObjectURL(url);notify('✅ Export téléchargé !');}
+
+// ===================== RESET =====================
+function confirmReset(){if(!confirm('⚠️ Supprimer TOUTES les données ?'))return;DB={profil:{nom:'',pseudo:'',objRevenu:0,objVentes:0},annonces:[],ventes:[]};save();closeModal('modalProfil');notify('🗑 Données supprimées');refreshAll();}
+
+// ===================== COPY MSG =====================
+function copyMsg(btn,text){navigator.clipboard.writeText(text).then(()=>{notify('✅ Copié !');btn.textContent='✅';setTimeout(()=>btn.textContent='Copier',2000);}).catch(()=>notify('⚠️ Impossible de copier',true));}
+
+// ===================== REFRESH =====================
+function refreshAll(){updateSidebar();renderOverview();renderAnnonces();renderVentes();if(currentPanel==='stats')renderStats();}
+
+// ===================== AJOUTS VESTIAIREPRO V2 =====================
+function h(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function csvEscape(value){return '"'+String(value??'').replace(/"/g,'""')+'"';}
+function toNumber(value){const n=parseFloat(String(value??'0').replace(',', '.').replace(/[^0-9.-]/g,''));return isNaN(n)?0:n;}
+function getRow(row, keys, fallback=''){
+  for(const k of keys){
+    const found=Object.keys(row).find(x=>x.toLowerCase().trim()===k.toLowerCase());
+    if(found && row[found]!==undefined && row[found]!==null && String(row[found]).trim()!=='') return String(row[found]).trim();
+  }
+  return fallback;
+}
+function safeURL(url){
+  const raw=String(url||'').trim();
+  if(!raw)return '';
+  if(/^https?:\/\//i.test(raw))return raw;
+  if(/^www\./i.test(raw))return 'https://'+raw;
+  return '';
+}
+function notificationLabel(type){return {likes:'Likes / favoris',messages:'Messages reçus',ventes:'Ventes'}[type]||'Notification';}
+function pushNotification(type,msg){
+  normalizeDB();
+  const item={id:String(Date.now())+'_'+Math.random().toString(16).slice(2),type,message:msg,date:new Date().toISOString(),read:false};
+  DB.meta.notifications=[item,...(DB.meta.notifications||[])].slice(0,80);
+  save();
+  updateNotifDot();
+}
+function notifyEvent(type,msg){
+  normalizeDB();
+  if(type==='likes' && !DB.profil.notifLikes)return;
+  if(type==='messages' && !DB.profil.notifMessages)return;
+  if(type==='ventes' && !DB.profil.notifVentes)return;
+  pushNotification(type,msg);
+  notify(msg);
+}
+function updateNotifDot(){
+  const dot=document.getElementById('topNotifDot');
+  if(!dot)return;
+  normalizeDB();
+  const unread=(DB.meta.notifications||[]).filter(n=>!n.read).length;
+  dot.style.display=unread>0?'block':'none';
+}
+function renderNotificationsList(){
+  normalizeDB();
+  const el=document.getElementById('notificationsList');
+  const btn=document.getElementById('btnClearNotifications');
+  if(!el)return;
+  const list=[...(DB.meta.notifications||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(btn)btn.style.display=list.length?'inline-flex':'none';
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🔕</div><div class="empty-title">Aucune notification reçue</div><div class="empty-sub">Les nouvelles ventes, likes ou messages apparaîtront ici après une actualisation.</div></div>';
+    return;
+  }
+  el.innerHTML=list.map(n=>{
+    const d=new Date(n.date);
+    const date=isNaN(d)?'—':d.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="notification-item ${n.read?'':'unread'}"><div class="notification-item-top"><div class="notification-message">${h(n.message)}</div><div class="notification-date">${date}</div></div><div class="notification-type">${notificationLabel(n.type)}</div></div>`;
+  }).join('');
+}
+function openNotifications(){
+  normalizeDB();
+  renderNotificationsList();
+  openModal('modalNotifications');
+  DB.meta.notifications=(DB.meta.notifications||[]).map(n=>({...n,read:true}));
+  save();
+  updateNotifDot();
+}
+function clearNotifications(){
+  if(!confirm('Effacer toutes les notifications reçues ?'))return;
+  normalizeDB();
+  DB.meta.notifications=[];
+  save();
+  renderNotificationsList();
+  updateNotifDot();
+  notify('🗑 Notifications effacées');
+}
+function setNoNotificationsFromModal(){}
+function saveNotificationsFromModal(){}
+function finishOnboarding(){
+  const nom=document.getElementById('oNom').value.trim();
+  if(!nom){notify('⚠️ Ajoute au moins un pseudo',true);return;}
+  DB.profil.nom=nom;
+  DB.profil.pseudo=document.getElementById('oPseudo').value.trim();
+  DB.profil.objRevenu=parseFloat(document.getElementById('oObjRevenu').value)||0;
+  DB.profil.objVentes=parseInt(document.getElementById('oObjVentes').value)||0;
+  save();closeModal('modalOnboarding');notify('✅ Compte VestiairePro créé');refreshAll();
+}
+function maybeOpenOnboarding(){if(!currentUserEmail)return;normalizeDB();if(!DB.profil.nom){setTimeout(()=>openModal('modalOnboarding'),250);}}
+function setNoNotifications(){['pNotifLikes','pNotifMessages','pNotifVentes'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});notify('🔕 Notifications désactivées');}
+
+// PROFIL — version enrichie
+function openProfil(){
+  normalizeDB();
+  const accountEl=document.getElementById('accountEmail');if(accountEl)accountEl.textContent=currentUserEmail||'Compte local';
+  document.getElementById('pNom').value=DB.profil.nom;
+  document.getElementById('pPseudo').value=DB.profil.pseudo;
+  document.getElementById('pObjRevenu').value=DB.profil.objRevenu||'';
+  document.getElementById('pObjVentes').value=DB.profil.objVentes||'';
+  document.getElementById('pNotifLikes').checked=!!DB.profil.notifLikes;
+  document.getElementById('pNotifMessages').checked=!!DB.profil.notifMessages;
+  document.getElementById('pNotifVentes').checked=!!DB.profil.notifVentes;
+  document.getElementById('pTheme').value=DB.profil.theme==='light'?'light':'dark';
+  openModal('modalProfil');
+}
+function saveProfil(){
+  normalizeDB();
+  DB.profil.nom=document.getElementById('pNom').value.trim()||'Mon profil';
+  DB.profil.pseudo=document.getElementById('pPseudo').value.trim();
+  DB.profil.objRevenu=parseFloat(document.getElementById('pObjRevenu').value)||0;
+  DB.profil.objVentes=parseInt(document.getElementById('pObjVentes').value)||0;
+  DB.profil.notifLikes=document.getElementById('pNotifLikes').checked;
+  DB.profil.notifMessages=document.getElementById('pNotifMessages').checked;
+  DB.profil.notifVentes=document.getElementById('pNotifVentes').checked;
+  DB.profil.theme=document.getElementById('pTheme').value==='light'?'light':'dark';
+  applyTheme(DB.profil.theme);updateNotifDot();save();updateSidebar();closeModal('modalProfil');notify('✅ Réglages enregistrés !');refreshAll();
+}
+
+// ANNONCES — version avec lien, messages reçus et message copiable
+function openModalAdd(){
+  editingId=null;
+  document.getElementById('modalAnnonceTitle').textContent='Nouvelle annonce';
+  ['fTitre','fTaille','fVues','fFavoris','fMessages','fLien'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fPrix').value='';
+  document.getElementById('fCat').value='👗 Robes & Jupes';
+  document.getElementById('fEtat').value='Très bon état';
+  document.getElementById('fStatut').value='Actif';
+  openModal('modalAnnonce');
+}
+function openModalEdit(id){
+  const a=DB.annonces.find(x=>x.id===id);if(!a)return;
+  editingId=id;
+  document.getElementById('modalAnnonceTitle').textContent='Modifier';
+  document.getElementById('fTitre').value=a.titre||'';
+  document.getElementById('fPrix').value=a.prix||'';
+  document.getElementById('fCat').value=a.cat||'📦 Autre';
+  document.getElementById('fTaille').value=a.taille||'';
+  document.getElementById('fEtat').value=a.etat||'Très bon état';
+  document.getElementById('fVues').value=a.vues||0;
+  document.getElementById('fFavoris').value=a.favoris||0;
+  document.getElementById('fMessages').value=a.messages||0;
+  document.getElementById('fLien').value=a.lien||'';
+  document.getElementById('fStatut').value=a.statut||'Actif';
+  openModal('modalAnnonce');
+}
+function saveAnnonce(){
+  const titre=document.getElementById('fTitre').value.trim();
+  const prix=parseFloat(document.getElementById('fPrix').value);
+  if(!titre||isNaN(prix)){notify('⚠️ Titre et prix requis',true);return;}
+  const old=editingId?(DB.annonces.find(x=>x.id===editingId)||{}):{};
+  const a={
+    id:editingId||Date.now().toString(),titre,prix,
+    cat:document.getElementById('fCat').value,
+    taille:document.getElementById('fTaille').value.trim(),
+    etat:document.getElementById('fEtat').value,
+    vues:parseInt(document.getElementById('fVues').value)||0,
+    favoris:parseInt(document.getElementById('fFavoris').value)||0,
+    messages:parseInt(document.getElementById('fMessages').value)||0,
+    lien:document.getElementById('fLien').value.trim(),
+    statut:document.getElementById('fStatut').value,
+    date:editingId?(old.date||new Date().toISOString()):new Date().toISOString()
+  };
+  if(editingId){const i=DB.annonces.findIndex(x=>x.id===editingId);if(i>=0)DB.annonces[i]=a;}else{DB.annonces.unshift(a);}
+  save();closeModal('modalAnnonce');
+  if(a.favoris>(old.favoris||0))notifyEvent('likes',`❤️ ${a.favoris} favori(s) sur ${a.titre}`);
+  if(a.messages>(old.messages||0))notifyEvent('messages',`✉️ ${a.messages} message(s) sur ${a.titre}`);
+  if(a.favoris<=(old.favoris||0)&&a.messages<=(old.messages||0))notify(editingId?'✅ Annonce modifiée !':'✅ Annonce ajoutée !');
+  refreshAll();
+}
+function renderAnnonces(){
+  normalizeDB();
+  const search=(document.getElementById('searchAnnonces')?.value||'').toLowerCase();
+  const list=DB.annonces.filter(a=>{const mF=!currentFilter||a.statut===currentFilter;const mS=!search||String(a.titre||'').toLowerCase().includes(search);return mF&&mS;});
+  const n=DB.annonces.length,act=DB.annonces.filter(a=>a.statut==='Actif').length;
+  document.getElementById('annoncesSub').textContent=`${n} annonces · ${act} actives`;
+  const badge=document.getElementById('badgeAnnonces');badge.textContent=n;badge.style.display=n>0?'block':'none';
+  const el=document.getElementById('annoncesTable');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏷</div><div class="empty-title">Aucune annonce trouvée</div></div>';renderPrixSuggestions();return;}
+  el.innerHTML=list.map(a=>{
+    const age=Math.floor((Date.now()-new Date(a.date||Date.now()))/86400000);
+    const sc={Actif:'green',Vendu:'teal',Inactif:'red',Réservé:'yellow'}[a.statut]||'gray';
+    const url=safeURL(a.lien);
+    const link=url?`<div class="annonce-link"><a href="${h(url)}" target="_blank" rel="noopener">Lien article ↗</a></div>`:'';
+    return`<div class="annonce-row">
+      <div class="annonce-thumb">${gi(a.cat)}</div>
+      <div class="annonce-info">
+        <div class="annonce-name">${h(a.titre)}</div>
+        <div class="annonce-meta">${age}j · ${parseInt(a.vues)||0} vues · ${parseInt(a.favoris)||0} ♡ · ${parseInt(a.messages)||0} msg</div>
+        ${link}
+      </div>
+      <div class="annonce-right">
+        <div class="annonce-price">${toNumber(a.prix)}€</div>
+        <div class="annonce-actions">
+          <span class="badge badge-${sc}" style="font-size:9px">${h(a.statut)}</span>
+          <button class="btn btn-sm" onclick="copyArticleMsg('${a.id}')">💬</button>
+          <button class="btn btn-sm" onclick="openModalEdit('${a.id}')">✏️</button>
+          ${a.statut==='Actif'?`<button class="btn btn-sm" onclick="markSold('${a.id}')">✔</button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="deleteAnnonce('${a.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  renderPrixSuggestions();
+}
+function copyArticleMsg(id){
+  const a=DB.annonces.find(x=>x.id===id);if(!a)return;
+  const url=safeURL(a.lien);
+  const text=`Bonjour ! Oui, l’article "${a.titre}" est toujours disponible${url?` : ${url}`:''}. Je peux l’envoyer rapidement. 😊`;
+  navigator.clipboard.writeText(text).then(()=>notify('✅ Message article copié !')).catch(()=>notify('⚠️ Impossible de copier',true));
+}
+function saveVente(){
+  const titre=document.getElementById('vTitre').value.trim();const prix=parseFloat(document.getElementById('vPrix').value);
+  if(!titre||isNaN(prix)){notify('⚠️ Article et prix requis',true);return;}
+  const v={id:Date.now().toString(),titre,prix,date:document.getElementById('vDate').value||new Date().toISOString().split('T')[0],acheteur:document.getElementById('vAcheteur').value.trim()||'—',statut:document.getElementById('vStatut').value,cat:document.getElementById('vCat').value};
+  DB.ventes.unshift(v);save();closeModal('modalVente');notifyEvent('ventes','🔔 Vente enregistrée : '+titre+' · '+prix+'€');refreshAll();
+}
+
+// IMPORT VINTED — fichier ZIP complet + fallback CSV
+function handleCSV(input){
+  const files=Array.from(input.files||[]);
+  if(!files.length)return;
+  importBuffer=[];
+  const preview=document.getElementById('importPreview');
+  preview.innerHTML='<div style="font-size:12px;color:var(--muted)">⏳ Analyse du fichier Vinted… cela peut prendre quelques secondes.</div>';
+  document.getElementById('btnImportConfirm').style.display='none';
+  const file=files[0];
+  const lower=file.name.toLowerCase();
+  if(lower.endsWith('.zip')){
+    parseVintedZip(file).then(renderImportPreview).catch(err=>{
+      console.error(err);
+      importBuffer.push({ok:false,label:'Impossible de lire le ZIP Vinted : '+(err&&err.message?err.message:err)});
+      renderImportPreview();
+    });
+  }else{
+    let pending=files.length;
+    files.forEach(f=>parseCSV(f,()=>{pending--;if(pending===0)renderImportPreview();}));
+  }
+  input.value='';
+}
+async function parseVintedZip(file){
+  if(typeof JSZip==='undefined'){
+    throw new Error('module ZIP non chargé. Recharge la page avec internet puis réessaie.');
+  }
+  const zip=await JSZip.loadAsync(file);
+  const names=Object.keys(zip.files);
+  const readBySuffix=async(suffix)=>{
+    const wanted=names.find(n=>n.toLowerCase().endsWith(suffix.toLowerCase()));
+    return wanted?await zip.files[wanted].async('string'):'';
+  };
+  const profileHTML=await readBySuffix('profile/index.html');
+  const listingsHTML=await readBySuffix('listings/index.html');
+  const ordersHTML=await readBySuffix('orders/index.html');
+  const messagesHTML=await readBySuffix('messages/index.html');
+  if(!listingsHTML&&!ordersHTML&&!messagesHTML){throw new Error('aucun fichier Vinted reconnu dans ce ZIP');}
+  const profileDoc=profileHTML?htmlDoc(profileHTML):null;
+  const login=profileDoc?cleanText(getProp(profileDoc,'login')):'';
+  if(login){
+    DB.profil.pseudo='@'+login;
+    if(!DB.profil.nom)DB.profil.nom=login;
+  }
+  const msgMap=messagesHTML?parseVintedMessages(htmlDoc(messagesHTML)):{};
+  const orderData=ordersHTML?parseVintedOrders(htmlDoc(ordersHTML),login):{ventes:[],soldTitles:new Set()};
+  const annonces=listingsHTML?parseVintedListings(htmlDoc(listingsHTML),msgMap,orderData.soldTitles):[];
+  annonces.forEach(a=>importBuffer.push({ok:true,kind:'annonce',obj:a,label:'Annonce · '+a.titre+' — '+a.prix+'€'}));
+  orderData.ventes.forEach(v=>importBuffer.push({ok:true,kind:'vente',obj:v,label:'Vente · '+v.titre+' — '+v.prix+'€'}));
+  const totalPhotos=names.filter(n=>/listings\/photos\//i.test(n)).length;
+  importBuffer.unshift({ok:true,kind:'info',label:`ZIP reconnu : ${annonces.length} annonce(s), ${orderData.ventes.length} vente(s), ${Object.keys(msgMap).length} conversation(s), ${totalPhotos} photo(s) détectée(s).`});
+}
+function htmlDoc(text){return new DOMParser().parseFromString(text,'text/html');}
+function cleanText(v){return (v||'').replace(/\s+/g,' ').replace(/Aucune donnée/g,'').trim();}
+function getProp(scope,name){const el=scope.querySelector(`[itemprop="${CSS.escape(name)}"]`);return el?cleanText(el.textContent):'';}
+function normalizeKey(text){return cleanText(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function parseMoney(v){const n=parseFloat(String(v||'').replace(',', '.').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;}
+function parseDateVinted(v){
+  v=cleanText(v); if(!v)return new Date().toISOString();
+  const m=v.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:v.split('T')[0];
+}
+function parseVintedMessages(doc){
+  const map={};
+  doc.querySelectorAll('.cell[itemscope]').forEach(cell=>{
+    const subject=getProp(cell,'subject'); if(!subject)return;
+    const key=normalizeKey(subject); if(!key)return;
+    const bodyCount=cell.querySelectorAll('[itemprop="message_body"]').length;
+    const sys=parseInt(getProp(cell,'system_message_count'))||0;
+    const count=bodyCount||sys||1;
+    if(!map[key])map[key]={conversations:0,messages:0,lastDate:'',buyers:new Set()};
+    map[key].conversations+=1;
+    map[key].messages+=count;
+    const other=getProp(cell,'opposite_login'); if(other)map[key].buyers.add(other);
+    const d=getProp(cell,'date'); if(d)map[key].lastDate=d;
+  });
+  Object.values(map).forEach(v=>v.buyers=[...v.buyers]);
+  return map;
+}
+function extractListingId(cell){
+  const img=cell.querySelector('img[itemprop="item_photo"], img');
+  const raw=(img&&img.getAttribute('src'))||(img&&img.closest('a')&&img.closest('a').getAttribute('href'))||'';
+  const m=raw.match(/photos\/(\d+)\//); return m?m[1]:'';
+}
+function parseVintedListings(doc,msgMap,soldTitles){
+  const out=[];
+  doc.querySelectorAll('.cell[itemscope]').forEach((cell,i)=>{
+    const titleEl=cell.querySelector('[itemprop="title"]');
+    const titre=cleanText(titleEl?titleEl.textContent:'');
+    if(!titre)return;
+    const key=normalizeKey(titre);
+    const id=extractListingId(cell)||Date.now().toString()+Math.random().toString(16).slice(2);
+    const msg=msgMap[key]||null;
+    const statut=soldTitles&&soldTitles.has(key)?'Vendu':'Actif';
+    out.push({
+      id:String(id),
+      titre,
+      prix:parseMoney(getProp(cell,'order_value')),
+      cat:'📦 Autre',
+      taille:getProp(cell,'size'),
+      etat:getProp(cell,'status')||'Bon état',
+      vues:parseInt(parseMoney(getProp(cell,'views_count')))||0,
+      favoris:parseInt(parseMoney(getProp(cell,'favourite_count')))||0,
+      messages:msg?msg.conversations:0,
+      lien:id?`https://www.vinted.fr/items/${id}`:'',
+      statut,
+      date:parseDateVinted(getProp(cell,'created_at')),
+      brand:getProp(cell,'brand'),
+      couleur:getProp(cell,'color')
+    });
+  });
+  return out;
+}
+function parseVintedOrders(doc,login){
+  const ventes=[]; const soldTitles=new Set(); const me=(login||'').toLowerCase();
+  doc.querySelectorAll('.cell[itemscope]').forEach((cell,i)=>{
+    const seller=getProp(cell,'seller');
+    const buyer=getProp(cell,'buyer');
+    const status=getProp(cell,'status');
+    const statusKey=normalizeKey(status);
+    if(statusKey.includes('annul'))return;
+    if(me && seller.toLowerCase()!==me)return;
+    const orderDate=parseDateVinted(getProp(cell,'order_purchased'));
+    const orderTotal=parseMoney(getProp(cell,'order_value'));
+    const items=[...cell.querySelectorAll('li[itemscope]')];
+    if(items.length){
+      items.forEach((li,idx)=>{
+        const titre=getProp(li,'item_title')||'Article vendu';
+        const prix=parseMoney(getProp(li,'item_price'))||orderTotal;
+        soldTitles.add(normalizeKey(titre));
+        ventes.push({id:Date.now().toString()+Math.random().toString(16).slice(2)+idx,titre,prix,date:orderDate,acheteur:buyer||'—',statut:status||'Vendu',cat:'📦 Autre'});
+      });
+    }else if(orderTotal>0){
+      ventes.push({id:Date.now().toString()+Math.random().toString(16).slice(2),titre:'Commande Vinted',prix:orderTotal,date:orderDate,acheteur:buyer||'—',statut:status||'Vendu',cat:'📦 Autre'});
+    }
+  });
+  return {ventes,soldTitles};
+}
+function parseCSV(file,done){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result||'';
+    if(file.name.toLowerCase().endsWith('.html')){parseSingleVintedHTML(text,file.name);done&&done();return;}
+    const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+    if(lines.length<2){importBuffer.push({ok:false,label:file.name+' : fichier vide ou non reconnu'});done&&done();return;}
+    const delimiter=(lines[0].split(';').length>lines[0].split(',').length)?';':',';
+    const headers=parseCSVLineFlexible(lines[0],delimiter).map(x=>x.replace(/^"|"$/g,'').toLowerCase().trim());
+    lines.slice(1).forEach((line,i)=>{
+      const cols=parseCSVLineFlexible(line,delimiter);
+      const row={};headers.forEach((h,j)=>row[h]=(cols[j]||'').replace(/^"|"$/g,'').trim());
+      try{const obj=mapCSVRow(row,i,file.name);importBuffer.push({ok:true,kind:importType==='ventes'?'vente':'annonce',obj,label:`${obj.titre} — ${obj.prix}€`});}
+      catch(ex){importBuffer.push({ok:false,label:file.name+' ligne '+(i+2)+' : '+ex.message});}
+    });
+    done&&done();
+  };
+  reader.onerror=function(){importBuffer.push({ok:false,label:file.name+' : lecture impossible'});done&&done();};
+  reader.readAsText(file,'UTF-8');
+}
+function parseSingleVintedHTML(text,fileName){
+  const doc=htmlDoc(text); const lower=fileName.toLowerCase();
+  if(lower.includes('listing')) parseVintedListings(doc,{},new Set()).forEach(a=>importBuffer.push({ok:true,kind:'annonce',obj:a,label:'Annonce · '+a.titre}));
+  else if(lower.includes('order')) parseVintedOrders(doc,DB.profil.pseudo.replace('@','')).ventes.forEach(v=>importBuffer.push({ok:true,kind:'vente',obj:v,label:'Vente · '+v.titre}));
+  else importBuffer.push({ok:false,label:fileName+' : HTML Vinted non reconnu. Envoie plutôt le ZIP complet.'});
+}
+function parseCSVLineFlexible(line,delimiter){const result=[];let cur='',inQ=false;for(let c of line){if(c==='"'){inQ=!inQ;}else if(c===delimiter&&!inQ){result.push(cur);cur='';}else{cur+=c;}}result.push(cur);return result;}
+function mapCSVRow(row,i,fileName){
+  if(importType==='annonces'){
+    const titre=getRow(row,['title','titre','article','item','item_title','name'],'Article '+(i+1));
+    return {id:Date.now().toString()+Math.random().toString(16).slice(2),titre,prix:toNumber(getRow(row,['price','prix','price_amount','amount'])),cat:getRow(row,['category','categorie','catégorie'],'📦 Autre'),taille:getRow(row,['size','taille']),etat:getRow(row,['condition','etat','état'],'Bon état'),vues:parseInt(toNumber(getRow(row,['views','vues','view_count','nb_vues']))),favoris:parseInt(toNumber(getRow(row,['favourites','favorites','favoris','likes','like_count','nb_favoris']))),messages:parseInt(toNumber(getRow(row,['messages','message_count','messages_recus','messages reçus','conversations']))),lien:getRow(row,['url','link','lien','item_url','permalink','article_url']),statut:getRow(row,['status','statut'],'Actif'),date:getRow(row,['created_at','created','date'],new Date().toISOString())};
+  }
+  return {id:Date.now().toString()+Math.random().toString(16).slice(2),titre:getRow(row,['title','titre','item','article','item_title'],'Vente '+(i+1)),prix:toNumber(getRow(row,['total_amount','price','prix','amount','montant'])),date:(getRow(row,['created_at','date','sold_at'])||new Date().toISOString()).split('T')[0],acheteur:getRow(row,['buyer','acheteur','username','user'],'—'),statut:getRow(row,['status','statut'],'Livré'),cat:getRow(row,['category','categorie','catégorie'],'📦 Autre')};
+}
+function renderImportPreview(){
+  const preview=document.getElementById('importPreview');
+  const actionable=importBuffer.filter(r=>r.ok&&r.kind!=='info');
+  const infos=importBuffer.filter(r=>r.ok&&r.kind==='info');
+  const annonces=actionable.filter(r=>r.kind==='annonce').length;
+  const ventes=actionable.filter(r=>r.kind==='vente').length;
+  const err=importBuffer.filter(r=>!r.ok);
+  preview.innerHTML=`<div style="font-size:12px;color:var(--text);margin-bottom:8px"><strong>${annonces}</strong> annonce(s) · <strong>${ventes}</strong> vente(s) · <strong style="color:var(--coral)">${err.length}</strong> erreur(s)</div>`+
+    infos.map(r=>`<div class="import-preview-row import-preview-ok">✅ ${h(r.label)}</div>`).join('')+
+    actionable.slice(0,8).map(r=>`<div class="import-preview-row import-preview-ok">✅ ${h(r.label)}</div>`).join('')+
+    err.slice(0,4).map(r=>`<div class="import-preview-row import-preview-err">❌ ${h(r.label)}</div>`).join('')+
+    (actionable.length>8?`<div style="font-size:11px;color:var(--muted);margin-top:4px">... et ${actionable.length-8} autres données</div>`:'');
+  document.getElementById('btnImportConfirm').style.display=actionable.length>0?'inline-flex':'none';
+}
+function sameAnnonce(a,b){
+  if(a.id&&b.id&&String(a.id)===String(b.id))return true;
+  const ak=normalizeKey(a.titre||''),bk=normalizeKey(b.titre||'');
+  return !!ak&&ak===bk;
+}
+function sameVente(a,b){
+  return normalizeKey([a.titre,a.date,a.prix,a.acheteur].join('|'))===normalizeKey([b.titre,b.date,b.prix,b.acheteur].join('|'));
+}
+function mergeImportedAnnonces(annonces){
+  let added=0,updated=0,newLikes=0,newMessages=0;
+  annonces.forEach(a=>{
+    const idx=DB.annonces.findIndex(old=>sameAnnonce(old,a));
+    if(idx>=0){
+      const old=DB.annonces[idx];
+      const oldFav=parseInt(old.favoris)||0, oldMsg=parseInt(old.messages)||0;
+      const merged={...old,...a,id:old.id||a.id,date:a.date||old.date||new Date().toISOString()};
+      DB.annonces[idx]=merged;
+      newLikes+=Math.max(0,(parseInt(merged.favoris)||0)-oldFav);
+      newMessages+=Math.max(0,(parseInt(merged.messages)||0)-oldMsg);
+      updated++;
+    }else{DB.annonces.unshift(a);added++;}
+  });
+  return {added,updated,newLikes,newMessages};
+}
+function mergeImportedVentes(ventes){
+  let added=0,skipped=0;
+  ventes.forEach(v=>{
+    if(DB.ventes.some(old=>sameVente(old,v))){skipped++;return;}
+    DB.ventes.unshift(v);added++;
+  });
+  return {added,skipped};
+}
+function confirmImport(){
+  const vals=importBuffer.filter(r=>r.ok&&r.kind!=='info');
+  const annonces=vals.filter(r=>r.kind==='annonce').map(r=>r.obj);
+  const ventes=vals.filter(r=>r.kind==='vente').map(r=>r.obj);
+  const aStats=mergeImportedAnnonces(annonces);
+  const vStats=mergeImportedVentes(ventes);
+  DB.meta.lastImport=new Date().toISOString();
+  save();closeModal('modalImport');refreshAll();
+  let msg=`✅ Données actualisées : ${aStats.added} ajoutée(s), ${aStats.updated} article(s) mis à jour, ${vStats.added} vente(s).`;
+  notify(msg);
+  if(aStats.newLikes>0)notifyEvent('likes',`❤️ ${aStats.newLikes} nouveau(x) like(s)/favori(s)`);
+  if(aStats.newMessages>0)notifyEvent('messages',`✉️ ${aStats.newMessages} nouveau(x) message(s)`);
+}
+function exportCSV(){
+  if(!DB.annonces.length&&!DB.ventes.length){notify('⚠️ Aucune donnée',true);return;}
+  let csv='Type,Titre,Prix,Catégorie,Statut,Date,Vues,Favoris,Messages,Lien\n';
+  DB.annonces.forEach(a=>{csv+=['annonce',a.titre,a.prix,a.cat,a.statut,a.date||'',a.vues||0,a.favoris||0,a.messages||0,a.lien||''].map(csvEscape).join(',')+'\n';});
+  csv+='\nType,Titre,Prix,Catégorie,Date,Acheteur,Statut\n';
+  DB.ventes.forEach(v=>{csv+=['vente',v.titre,v.prix,v.cat||'',v.date||'',v.acheteur||'',v.statut||''].map(csvEscape).join(',')+'\n';});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='VestiairePro_export.csv';a.click();URL.revokeObjectURL(url);notify('✅ Export téléchargé !');
+}
+async function confirmReset(){
+  if(!confirm('⚠️ Supprimer TOUTES les données ?'))return;
+  DB=emptyDB();
+  if(currentUserEmail)localStorage.removeItem(dataKey(currentUserEmail));
+  await saveRemote();
+  closeModal('modalProfil');notify('🗑 Données supprimées');refreshAll();maybeOpenOnboarding();
+}
+
+
+// ===================== CORRECTIONS VESTIAIREPRO LOCALE + OBJECTIFS =====================
+const LOCAL_AUTH_USERS_KEY='vestiairepro_users_v4';
+const LOCAL_AUTH_SESSION_KEY='vestiairepro_session_v4';
+let revenuePeriod='weeks';
+function dataKey(email){return 'vestiairepro_db_user_'+String(email||'').toLowerCase();}
+function getUsers(){try{return JSON.parse(localStorage.getItem(LOCAL_AUTH_USERS_KEY)||'{}')||{};}catch(e){return {};}}
+function setUsers(users){localStorage.setItem(LOCAL_AUTH_USERS_KEY,JSON.stringify(users));}
+async function hashPassword(email,password){
+  const text='VestiairePro|'+String(email).toLowerCase()+'|'+password;
+  if(window.crypto&&crypto.subtle){
+    const data=new TextEncoder().encode(text);
+    const digest=await crypto.subtle.digest('SHA-256',data);
+    return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  return btoa(unescape(encodeURIComponent(text)));
+}
+function save(){
+  if(!currentUserEmail)return;
+  try{normalizeDB();localStorage.setItem(dataKey(currentUserEmail),JSON.stringify(DB));}catch(e){}
+}
+function saveRemote(){save();}
+function load(){
+  DB=emptyDB();
+  if(!currentUserEmail){normalizeDB();return;}
+  try{const r=localStorage.getItem(dataKey(currentUserEmail));if(r)DB=JSON.parse(r);}catch(e){}
+  normalizeDB();
+}
+async function authSubmit(){
+  clearAuthError();
+  const email=document.getElementById('authEmail').value.trim().toLowerCase();
+  const password=document.getElementById('authPassword').value;
+  const password2=document.getElementById('authPassword2').value;
+  const users=getUsers();
+  if(!validEmail(email)){showAuthError('Adresse mail invalide. Vérifie l’écriture de ton adresse.');notify('⚠️ Adresse mail invalide',true);document.getElementById('authEmail').focus();return;}
+  if(password.length<6){showAuthError('Mot de passe trop court : 6 caractères minimum.');notify('⚠️ Mot de passe : 6 caractères minimum',true);document.getElementById('authPassword').focus();return;}
+  if(authMode==='register'){
+    if(users[email]){showAuthError('Ce compte existe déjà. Connecte-toi avec cette adresse.');notify('⚠️ Ce compte existe déjà',true);setAuthMode('login');return;}
+    if(password!==password2){showAuthError('Les deux mots de passe ne correspondent pas.');notify('⚠️ Les mots de passe ne correspondent pas',true);document.getElementById('authPassword2').focus();return;}
+    users[email]={email,passwordHash:await hashPassword(email,password),createdAt:new Date().toISOString()};
+    setUsers(users);
+    currentUserEmail=email;currentUserId='local_'+email;
+    localStorage.setItem(LOCAL_AUTH_SESSION_KEY,email);
+    const old=localStorage.getItem('vestiairepro_db');
+    if(old && confirm('Importer les anciennes données locales dans ce compte ?')){
+      try{DB=JSON.parse(old);}catch(e){DB=emptyDB();}
+      normalizeDB();
+    }else{
+      DB=emptyDB();
+    }
+    DB.profil.nom=document.getElementById('authName').value.trim()||email.split('@')[0];
+    save();hideAuth();refreshAll();notify('✅ Compte créé');
+    setTimeout(()=>openModal('modalAddChoice'),350);
+    return;
+  }
+  if(!users[email]){showAuthError('Adresse mail inconnue : aucun compte VestiairePro n’existe avec cette adresse sur cet appareil.');notify('⚠️ Adresse mail inconnue',true);document.getElementById('authEmail').focus();return;}
+  const hash=await hashPassword(email,password);
+  if(hash!==users[email].passwordHash){showAuthError('Mot de passe incorrect pour cette adresse mail.');notify('⚠️ Mot de passe incorrect',true);document.getElementById('authPassword').focus();return;}
+  currentUserEmail=email;currentUserId='local_'+email;
+  localStorage.setItem(LOCAL_AUTH_SESSION_KEY,email);
+  load();hideAuth();refreshAll();maybeOpenOnboarding();notify('✅ Connecté');
+}
+function bootAuth(){
+  const session=(localStorage.getItem(LOCAL_AUTH_SESSION_KEY)||'').toLowerCase();
+  const users=getUsers();
+  if(session&&users[session]){currentUserEmail=session;currentUserId='local_'+session;load();applyTheme(DB.profil.theme);hideAuth();refreshAll();maybeOpenOnboarding();}
+  else{currentUserEmail='';currentUserId='';DB=emptyDB();applyTheme('dark');showAuth();}
+}
+function logout(){
+  save();currentUserEmail='';currentUserId='';localStorage.removeItem(LOCAL_AUTH_SESSION_KEY);DB=emptyDB();closeModal('modalProfil');showAuth();notify('Déconnecté');
+}
+function openSetupGoals(){
+  normalizeDB();
+  const r=document.getElementById('gObjRevenu');
+  const v=document.getElementById('gObjVentes');
+  if(r)r.value=DB.profil.objRevenu||'';
+  if(v)v.value=DB.profil.objVentes||'';
+  setTimeout(()=>openModal('modalSetupGoals'),450);
+}
+function saveSetupGoals(){
+  const r=document.getElementById('gObjRevenu');
+  const v=document.getElementById('gObjVentes');
+  DB.profil.objRevenu=parseFloat(r&&r.value)||0;
+  DB.profil.objVentes=parseInt(v&&v.value)||0;
+  save();closeModal('modalSetupGoals');refreshAll();notify('🎯 Objectifs enregistrés !');
+}
+function setRevenuePeriod(period,el){
+  revenuePeriod=period;
+  document.querySelectorAll('#revPeriodTabs .tab').forEach(t=>t.classList.remove('active'));
+  const active=el||document.getElementById('revTab-'+period);
+  if(active)active.classList.add('active');
+  buildRevenuePeriodChart();
+}
+function startOfDay(d){const x=new Date(d);x.setHours(0,0,0,0);return x;}
+function saleDate(v){const d=new Date(v.date);return isNaN(d)?null:d;}
+function sumSalesBetween(start,end){
+  return DB.ventes.filter(v=>{const d=saleDate(v);return d&&d>=start&&d<end;}).reduce((s,v)=>s+toNumber(v.prix),0);
+}
+function buildWeeklyChart(){buildRevenuePeriodChart();}
+function buildRevenuePeriodChart(){
+  const mode=revenuePeriod||'weeks';
+  const data=[],labels=[];
+  const now=startOfDay(new Date());
+  let title='8 dernières semaines';
+  if(mode==='days'){
+    title='8 derniers jours';
+    for(let i=7;i>=0;i--){
+      const start=startOfDay(new Date(now));start.setDate(start.getDate()-i);
+      const end=new Date(start);end.setDate(end.getDate()+1);
+      data.push(sumSalesBetween(start,end));
+      labels.push(start.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}));
+    }
+  }else if(mode==='months'){
+    title='8 derniers mois';
+    const base=new Date(now.getFullYear(),now.getMonth(),1);
+    for(let i=7;i>=0;i--){
+      const start=new Date(base.getFullYear(),base.getMonth()-i,1);
+      const end=new Date(start.getFullYear(),start.getMonth()+1,1);
+      data.push(sumSalesBetween(start,end));
+      labels.push(start.toLocaleDateString('fr-FR',{month:'short'}).replace('.',''));
+    }
+  }else{
+    title='8 dernières semaines';
+    for(let i=7;i>=0;i--){
+      const start=startOfDay(new Date(now));start.setDate(start.getDate()-i*7-6);
+      const end=startOfDay(new Date(now));end.setDate(end.getDate()-i*7+1);
+      data.push(sumSalesBetween(start,end));
+      labels.push(i===0?'Act.':'S-'+i);
+    }
+  }
+  const total=data.reduce((s,v)=>s+v,0);
+  const t=document.getElementById('revPeriodTitle');if(t)t.textContent=title;
+  const totalEl=document.getElementById('revPeriodTotal');if(totalEl)totalEl.textContent=total.toFixed(0)+'€';
+  buildBarChart('revChart','revLabels',data,labels,70);
+}
+function renderAnnonces(){
+  normalizeDB();
+  if(currentFilter==='Vendu')currentFilter='';
+  const search=(document.getElementById('searchAnnonces')?.value||'').toLowerCase();
+  const visible=DB.annonces.filter(a=>String(a.statut||'').toLowerCase()!=='vendu');
+  const list=visible.filter(a=>{const mF=!currentFilter||a.statut===currentFilter;const mS=!search||String(a.titre||'').toLowerCase().includes(search);return mF&&mS;});
+  const n=visible.length,act=visible.filter(a=>a.statut==='Actif').length,res=visible.filter(a=>a.statut==='Réservé').length,ina=visible.filter(a=>a.statut==='Inactif').length;
+  const sub=document.getElementById('annoncesSub');if(sub)sub.textContent=`${n} annonces visibles · ${act} actives · ${res} réservées · ${ina} inactives`;
+  const badge=document.getElementById('badgeAnnonces');if(badge){badge.textContent=n;badge.style.display=n>0?'block':'none';}
+  const el=document.getElementById('annoncesTable');
+  if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏷</div><div class="empty-title">Aucune annonce trouvée</div><div class="empty-sub">Les annonces vendues sont masquées ici.</div></div>';renderPrixSuggestions();return;}
+  el.innerHTML=list.map(a=>{
+    const age=Math.floor((Date.now()-new Date(a.date||Date.now()))/86400000);
+    const sc={Actif:'green',Inactif:'red',Réservé:'yellow'}[a.statut]||'gray';
+    const url=safeURL(a.lien);
+    const link=url?`<div class="annonce-link"><a href="${h(url)}" target="_blank" rel="noopener">Lien article ↗</a></div>`:'';
+    return`<div class="annonce-row">
+      <div class="annonce-thumb">${gi(a.cat)}</div>
+      <div class="annonce-info">
+        <div class="annonce-name">${h(a.titre)}</div>
+        <div class="annonce-meta">${age}j · ${parseInt(a.vues)||0} vues · ${parseInt(a.favoris)||0} ♡ · ${parseInt(a.messages)||0} msg</div>
+        ${link}
+      </div>
+      <div class="annonce-right">
+        <div class="annonce-price">${toNumber(a.prix)}€</div>
+        <div class="annonce-actions">
+          <span class="badge badge-${sc}" style="font-size:9px">${h(a.statut)}</span>
+          <button class="btn btn-sm" onclick="copyArticleMsg('${a.id}')">💬</button>
+          <button class="btn btn-sm" onclick="openModalEdit('${a.id}')">✏️</button>
+          ${a.statut==='Actif'?`<button class="btn btn-sm" onclick="markSold('${a.id}')">✔</button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="deleteAnnonce('${a.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  renderPrixSuggestions();
+}
+function confirmImport(){
+  const vals=importBuffer.filter(r=>r.ok&&r.kind!=='info');
+  const annonces=vals.filter(r=>r.kind==='annonce').map(r=>r.obj);
+  const ventes=vals.filter(r=>r.kind==='vente').map(r=>r.obj);
+  const aStats=mergeImportedAnnonces(annonces);
+  const vStats=mergeImportedVentes(ventes);
+  DB.meta.lastImport=new Date().toISOString();
+  save();closeModal('modalImport');refreshAll();
+  let msg=`🎉 Félicitations, tout est prêt ! ${aStats.added} ajoutée(s), ${aStats.updated} article(s) mis à jour, ${vStats.added} vente(s).`;
+  notify(msg);
+  openSetupGoals();
+  if(aStats.newLikes>0)setTimeout(()=>notifyEvent('likes',`❤️ ${aStats.newLikes} nouveau(x) like(s)/favori(s)`),900);
+  if(aStats.newMessages>0)setTimeout(()=>notifyEvent('messages',`✉️ ${aStats.newMessages} nouveau(x) message(s)`),1400);
+}
+function loadDemoData(){
+  const fmt=d=>d.toISOString().split('T')[0];
+  const ago=n=>{const d=new Date();d.setDate(d.getDate()-n);return fmt(d);};
+  DB.annonces=[
+    {id:'d1',titre:'Robe Sandro noire S',prix:89,cat:'👗 Robes & Jupes',taille:'S',etat:'Très bon état',vues:234,favoris:18,messages:3,lien:'',statut:'Actif',date:ago(2)},
+    {id:'d2',titre:'Nike Air Max 90 T38',prix:67,cat:'👟 Chaussures',taille:'38',etat:'Bon état',vues:156,favoris:9,messages:1,lien:'',statut:'Réservé',date:ago(5)},
+    {id:'d3',titre:'Sac cuir Mango beige',prix:38,cat:'👜 Sacs & Accessoires',taille:'',etat:'Très bon état',vues:89,favoris:4,messages:0,lien:'',statut:'Inactif',date:ago(8)},
+    {id:'d4',titre:'Manteau laine H&M M',prix:45,cat:'🧥 Manteaux',taille:'M',etat:'Bon état',vues:0,favoris:0,messages:0,lien:'',statut:'Actif',date:ago(25)},
+    {id:'d5',titre:'Ancienne annonce vendue',prix:22,cat:'📦 Autre',taille:'',etat:'Bon état',vues:100,favoris:7,messages:2,lien:'',statut:'Vendu',date:ago(30)}
+  ];
+  DB.ventes=[];
+  const cats=['👗 Robes & Jupes','👟 Chaussures','👜 Sacs & Accessoires','🧥 Manteaux','💍 Bijoux'];
+  const titres=['Robe Zara fleurie','Escarpins T37','Tote bag cognac','Teddy jacket M','Boucles dorées','Top ASOS blanc','Jeans Levi\'s 501'];
+  const acheteurs=['@camille_m','@julie.w','@sarah_b','@lea_paris','@anna_k'];
+  for(let i=0;i<25;i++){const d=new Date();d.setDate(d.getDate()-Math.floor(Math.random()*90));DB.ventes.push({id:'dv'+i,titre:titres[i%titres.length],prix:Math.floor(8+Math.random()*75),date:fmt(d),acheteur:acheteurs[i%acheteurs.length],statut:['Livré','Livré','Livré','Expédié','En transit'][Math.floor(Math.random()*5)],cat:cats[i%cats.length]});}
+  DB.profil={...DEFAULT_PROFIL,nom:DB.profil.nom||'Marie',pseudo:'@marie_mode',objRevenu:2000,objVentes:50,notifLikes:true,notifMessages:true,notifVentes:true,theme:DB.profil.theme||'dark'};
+  save();closeModal('modalImport');refreshAll();notify('🎉 Félicitations, tout est prêt ! Données de démo chargées.');openSetupGoals();
+}
+function confirmReset(){
+  if(!confirm('⚠️ Supprimer TOUTES les données ?'))return;
+  DB=emptyDB();
+  if(currentUserEmail)localStorage.removeItem(dataKey(currentUserEmail));
+  save();closeModal('modalProfil');notify('🗑 Données supprimées');refreshAll();maybeOpenOnboarding();
+}
+
+
+
+// ===================== PATCH v9: tooltip graphique + affichage propre =====================
+function getChartTooltip(){
+  let tip=document.getElementById('chartTooltip');
+  if(!tip){tip=document.createElement('div');tip.id='chartTooltip';tip.className='chart-tooltip';document.body.appendChild(tip);}
+  return tip;
+}
+function showChartTooltip(target,label,value){
+  const tip=getChartTooltip();
+  const rect=target.getBoundingClientRect();
+  const amount=(Number(value)||0).toFixed(0)+'€';
+  tip.innerHTML=`${h(String(label||''))} · ${amount}`;
+  tip.style.left=(rect.left+rect.width/2)+'px';
+  tip.style.top=(rect.top-8)+'px';
+  tip.classList.add('show');
+  clearTimeout(tip._hideTimer);
+  tip._hideTimer=setTimeout(()=>tip.classList.remove('show'),2200);
+}
+function hideChartTooltipSoon(){
+  const tip=document.getElementById('chartTooltip');
+  if(!tip)return;
+  clearTimeout(tip._hideTimer);
+  tip._hideTimer=setTimeout(()=>tip.classList.remove('show'),900);
+}
+function addLongPressTooltip(target,label,value){
+  let timer=null;
+  const start=()=>{clearTimeout(timer);timer=setTimeout(()=>showChartTooltip(target,label,value),420);};
+  const stop=()=>{clearTimeout(timer);hideChartTooltipSoon();};
+  target.addEventListener('touchstart',start,{passive:true});
+  target.addEventListener('touchend',stop,{passive:true});
+  target.addEventListener('touchcancel',stop,{passive:true});
+  target.addEventListener('mousedown',start);
+  target.addEventListener('mouseup',stop);
+  target.addEventListener('mouseleave',stop);
+  target.addEventListener('click',()=>showChartTooltip(target,label,value));
+  target.setAttribute('title',`${label} · ${(Number(value)||0).toFixed(0)}€`);
+}
+function buildBarChart(cId,lId,data,labels,hgt){
+  const max=Math.max(...data.map(v=>Number(v)||0),1);
+  const c=document.getElementById(cId),l=document.getElementById(lId);
+  if(!c)return;
+  c.innerHTML='';
+  if(l)l.innerHTML='';
+  c.style.height=hgt+'px';
+  data.forEach((raw,i)=>{
+    const v=Number(raw)||0;
+    const wrap=document.createElement('div');
+    wrap.className='bar-wrap';
+    wrap.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;min-width:0;';
+    const bar=document.createElement('div');
+    bar.className='bar'+(v===0?' empty':'');
+    bar.style.height=Math.max(3,(v/max)*100)+'%';
+    addLongPressTooltip(bar,labels[i]||'',v);
+    wrap.appendChild(bar);
+    c.appendChild(wrap);
+    if(l){const lab=document.createElement('div');lab.className='bar-label';lab.textContent=labels[i]||'';l.appendChild(lab);}
+  });
+}
+
+
+
+// ===================== PATCH v10 : thème connexion + affichage accessible =====================
+const AUTH_THEME_KEY='vestiairepro_auth_theme_v10';
+function getPreferredAuthTheme(){
+  try{return localStorage.getItem(AUTH_THEME_KEY)||localStorage.getItem('vestiairepro_auth_theme')||'dark';}catch(e){return 'dark';}
+}
+function setGlobalTheme(mode,saveChoice=true){
+  const theme=mode==='light'?'light':'dark';
+  if(saveChoice){try{localStorage.setItem(AUTH_THEME_KEY,theme);localStorage.setItem('vestiairepro_auth_theme',theme);}catch(e){}}
+  applyTheme(theme);
+  const btn=document.getElementById('authThemeSwitchBtn');
+  const word=document.getElementById('authThemeWord');
+  if(btn){btn.classList.toggle('light',theme==='light');btn.setAttribute('aria-pressed',theme==='light'?'true':'false');}
+  if(word)word.textContent=theme==='light'?'Clair':'Sombre';
+  const select=document.getElementById('pTheme');
+  if(select)select.value=theme;
+}
+function toggleAuthTheme(){
+  const current=document.body.classList.contains('light-mode')?'light':'dark';
+  setGlobalTheme(current==='light'?'dark':'light',true);
+  if(currentUserEmail&&DB&&DB.profil){DB.profil.theme=document.body.classList.contains('light-mode')?'light':'dark';save();}
+}
+function ensureAuthThemeSwitch(){
+  const screen=document.getElementById('authScreen');
+  if(!screen)return;
+  let box=document.getElementById('authThemeToggle');
+  if(!box){
+    box=document.createElement('div');
+    box.id='authThemeToggle';
+    box.className='auth-theme-toggle';
+    box.innerHTML='<span class="theme-word" id="authThemeWord">Sombre</span><button type="button" class="theme-switch-btn" id="authThemeSwitchBtn" onclick="toggleAuthTheme()" aria-label="Changer le mode sombre ou clair"><span class="moon">🌙</span><span class="sun">☀️</span></button>';
+    screen.appendChild(box);
+  }
+  setGlobalTheme(getPreferredAuthTheme(),false);
+}
+const oldShowAuth_v10=showAuth;
+showAuth=function(){
+  try{clearAuthError();}catch(e){}
+  const s=document.getElementById('authScreen');
+  if(s)s.classList.add('open');
+  setAuthMode(authMode||'login');
+  ensureAuthThemeSwitch();
+};
+const oldHideAuth_v10=hideAuth;
+hideAuth=function(){
+  const s=document.getElementById('authScreen');
+  if(s)s.classList.remove('open');
+};
+const oldAuthSubmit_v10=authSubmit;
+authSubmit=async function(){
+  const chosenTheme=document.body.classList.contains('light-mode')?'light':'dark';
+  await oldAuthSubmit_v10.apply(this,arguments);
+  if(currentUserEmail&&DB&&DB.profil){
+    if(!DB.profil.theme || authMode==='register') DB.profil.theme=chosenTheme;
+    try{localStorage.setItem(AUTH_THEME_KEY,DB.profil.theme);}catch(e){}
+    applyTheme(DB.profil.theme);
+    save();
+  }
+};
+const oldOpenProfil_v10=openProfil;
+openProfil=function(){
+  oldOpenProfil_v10.apply(this,arguments);
+  const select=document.getElementById('pTheme');
+  if(select)select.value=(DB.profil&&DB.profil.theme)||getPreferredAuthTheme();
+};
+const oldSaveProfil_v10=saveProfil;
+saveProfil=function(){
+  const select=document.getElementById('pTheme');
+  if(select&&DB&&DB.profil){DB.profil.theme=select.value==='light'?'light':'dark';setGlobalTheme(DB.profil.theme,true);}
+  oldSaveProfil_v10.apply(this,arguments);
+};
+function shortSaleStatus(statut){
+  const s=String(statut||'').trim();
+  if(!s)return '—';
+  if(/paiement.*valid/i.test(s))return 'Paiement validé';
+  if(/commande.*final/i.test(s))return 'Commande finalisée';
+  if(/livr/i.test(s))return 'Livré';
+  if(/expédi|expedi/i.test(s))return 'Expédié';
+  if(/transit/i.test(s))return 'En transit';
+  if(/attente/i.test(s))return 'En attente';
+  return s.length>22?s.slice(0,21)+'…':s;
+}
+function statusColorClass(statut){
+  const s=shortSaleStatus(statut);
+  return ({'Livré':'green','Expédié':'teal','En transit':'yellow','En attente':'gray','Paiement validé':'teal','Commande finalisée':'green'}[s]||'gray');
+}
+function renderVentes(){
+  const el=document.getElementById('ventesTable');
+  const n=DB.ventes.length;
+  const tot=DB.ventes.reduce((s,v)=>s+toNumber(v.prix),0).toFixed(0);
+  const sub=document.getElementById('ventesSub');if(sub)sub.textContent=`${n} ventes · ${tot}€ total`;
+  const badge=document.getElementById('badgeVentes');if(badge){badge.textContent=n;badge.style.display=n>0?'block':'none';}
+  if(!el)return;
+  if(!n){el.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Aucune vente</div><div class="empty-sub">Ajoutez vos ventes ou importez vos données Vinted.</div></div>';return;}
+  el.innerHTML=DB.ventes.map(v=>{
+    const st=shortSaleStatus(v.statut);
+    const sc=statusColorClass(v.statut);
+    return`<div class="vente-row">
+      <div class="vente-thumb">${gi(v.cat||'📦 Autre')}</div>
+      <div class="vente-info"><div class="vente-name">${h(v.titre||'Vente')}</div><div class="vente-buyer">${h(v.acheteur||'—')}</div></div>
+      <div class="vente-right"><div class="vente-price">${toNumber(v.prix)}€</div><div class="vente-date">${h(v.date||'—')}</div><span class="badge badge-${sc} vente-status-short" title="${h(v.statut||'')}">${h(st)}</span><button class="btn btn-sm btn-danger" style="margin-top:5px;width:100%;justify-content:center" onclick="deleteVente('${v.id}')">✕</button></div>
+    </div>`;
+  }).join('');
+}
+function renderAnnonces(){
+  normalizeDB();
+  if(currentFilter==='Vendu')currentFilter='';
+  const search=(document.getElementById('searchAnnonces')?.value||'').toLowerCase();
+  const visible=DB.annonces.filter(a=>String(a.statut||'').toLowerCase()!=='vendu');
+  const list=visible.filter(a=>{const mF=!currentFilter||a.statut===currentFilter;const mS=!search||String(a.titre||'').toLowerCase().includes(search);return mF&&mS;});
+  const n=visible.length,act=visible.filter(a=>a.statut==='Actif').length,res=visible.filter(a=>a.statut==='Réservé').length,ina=visible.filter(a=>a.statut==='Inactif').length;
+  const sub=document.getElementById('annoncesSub');if(sub)sub.textContent=`${n} annonces visibles · ${act} actives · ${res} réservées · ${ina} inactives`;
+  const badge=document.getElementById('badgeAnnonces');if(badge){badge.textContent=n;badge.style.display=n>0?'block':'none';}
+  const el=document.getElementById('annoncesTable');
+  if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏷</div><div class="empty-title">Aucune annonce trouvée</div><div class="empty-sub">Les annonces vendues sont masquées ici.</div></div>';renderPrixSuggestions();return;}
+  el.innerHTML=list.map(a=>{
+    const age=Math.floor((Date.now()-new Date(a.date||Date.now()))/86400000);
+    const sc={Actif:'green',Inactif:'red',Réservé:'yellow'}[a.statut]||'gray';
+    const url=safeURL(a.lien);
+    const link=url?`<div class="annonce-link"><a href="${h(url)}" target="_blank" rel="noopener">Lien article ↗</a></div>`:'';
+    return`<div class="annonce-row">
+      <div class="annonce-thumb">${gi(a.cat)}</div>
+      <div class="annonce-info">
+        <div class="annonce-name">${h(a.titre)}</div>
+        <div class="annonce-meta">${age}j · ${parseInt(a.vues)||0} vues · ${parseInt(a.favoris)||0} ♡ · ${parseInt(a.messages)||0} msg</div>
+        ${link}
+      </div>
+      <div class="annonce-right">
+        <div class="annonce-price">${toNumber(a.prix)}€</div>
+        <span class="badge badge-${sc} annonce-status" style="font-size:9px">${h(a.statut)}</span>
+      </div>
+      <div class="annonce-actions">
+        <button class="btn btn-sm" onclick="copyArticleMsg('${a.id}')" title="Message">💬</button>
+        <button class="btn btn-sm" onclick="openModalEdit('${a.id}')" title="Modifier">✏️</button>
+        <button class="btn btn-sm" onclick="markSold('${a.id}')" title="Marquer vendu">✔</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAnnonce('${a.id}')" title="Supprimer">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  renderPrixSuggestions();
+}
+const oldBootAuth_v10=bootAuth;
+bootAuth=function(){
+  oldBootAuth_v10.apply(this,arguments);
+  ensureAuthThemeSwitch();
+};
+
+
+
+
+// ===================== PATCH v12 : % mensuel + libellé import =====================
+function getMonthSales(year, month){
+  return (DB.ventes||[]).filter(v=>{
+    const d=new Date(v.date);
+    return !isNaN(d) && d.getFullYear()===year && d.getMonth()===month;
+  });
+}
+function percentChangeText(current, previous){
+  const cur=Number(current)||0;
+  const prev=Number(previous)||0;
+  if(prev===0 && cur===0)return {text:'0% vs mois dernier',cls:''};
+  if(prev===0 && cur>0)return {text:'+100% vs mois dernier',cls:'up'};
+  const pct=Math.round(((cur-prev)/prev)*100);
+  return {text:(pct>0?'+':'')+pct+'% vs mois dernier',cls:pct>0?'up':(pct<0?'down':'')};
+}
+function setStatChange(id,info){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.textContent=info.text;
+  el.className='stat-change'+(info.cls?' '+info.cls:'');
+}
+function renderOverview(){
+  normalizeDB();
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  const pm=m===0?11:m-1;
+  const py=m===0?y-1:y;
+  const vm=getMonthSales(y,m);
+  const vPrev=getMonthSales(py,pm);
+  const rev=vm.reduce((s,v)=>s+toNumber(v.prix),0);
+  const revPrev=vPrev.reduce((s,v)=>s+toNumber(v.prix),0);
+  const tot=(DB.ventes||[]).length;
+  const pan=tot>0?((DB.ventes||[]).reduce((s,v)=>s+toNumber(v.prix),0)/tot).toFixed(0):0;
+  const visibleAnnonces=(DB.annonces||[]).filter(a=>String(a.statut||'').toLowerCase()!=='vendu');
+  const act=visibleAnnonces.filter(a=>a.statut==='Actif').length;
+  document.getElementById('statRevenusMois').textContent=rev.toFixed(0)+'€';
+  document.getElementById('statAnnonces').textContent=act;
+  document.getElementById('statVentesMois').textContent=vm.length;
+  document.getElementById('statPanier').textContent=pan+'€';
+  setStatChange('statRevenusChange',percentChangeText(rev,revPrev));
+  setStatChange('statVentesChange',percentChangeText(vm.length,vPrev.length));
+  const hasData=(DB.annonces||[]).length>0||(DB.ventes||[]).length>0;
+  const importAlert=document.getElementById('alerteImport');if(importAlert)importAlert.style.display=hasData?'none':'flex';
+  const alertes=[];
+  const sv=visibleAnnonces.filter(a=>a.statut==='Actif'&&(parseInt(a.vues)||0)===0);
+  if(sv.length)alertes.push(`<div class="alert alert-warn"><span style="font-size:15px">⚡</span><div class="alert-text"><strong>${sv.length} annonce(s)</strong> sans aucune vue.</div></div>`);
+  const vl=visibleAnnonces.filter(a=>a.statut==='Actif'&&Math.floor((Date.now()-new Date(a.date||Date.now()))/86400000)>14);
+  if(vl.length)alertes.push(`<div class="alert alert-warn"><span style="font-size:15px">📅</span><div class="alert-text"><strong>${vl.length} annonce(s)</strong> en ligne depuis +14 jours.</div></div>`);
+  const alertsEl=document.getElementById('alertesContainer');if(alertsEl)alertsEl.innerHTML=alertes.join('');
+  const conv=act>0?Math.round(vm.length/act*100):0;
+  const oR=DB.profil.objRevenu,oV=DB.profil.objVentes;
+  const perf=document.getElementById('perfSection');
+  if(perf){
+    perf.innerHTML=[
+      {l:'Conversion',v:conv,s:'%',c:'var(--teal)'},
+      {l:'Objectif revenus',v:oR>0?Math.min(100,Math.round(rev/oR*100)):0,s:'%',c:'var(--gold)',sub:oR>0?`${rev.toFixed(0)}€ / ${oR}€`:'Non défini'},
+      {l:'Objectif ventes',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
+    ].map(p=>`<div class="perf-row"><div class="perf-row-top"><span class="perf-row-label">${p.l}</span><span style="color:${p.c};font-family:'DM Mono',monospace;font-size:11px">${p.sub||p.v+p.s}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${p.v}%;background:linear-gradient(90deg,${p.c},${p.c}cc)"></div></div></div>`).join('');
+  }
+  const lv=(DB.ventes||[]).slice(0,4);
+  const last=document.getElementById('lastVentes');
+  if(last){
+    if(!lv.length){last.innerHTML='<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Aucune vente</div></div>';}
+    else{
+      last.innerHTML=lv.map(v=>{const st=typeof shortSaleStatus==='function'?shortSaleStatus(v.statut):String(v.statut||'Vendu');const sc=typeof statusColorClass==='function'?statusColorClass(v.statut):'gray';return`<div class="vente-row"><div class="vente-thumb">${gi(v.cat||'📦 Autre')}</div><div class="vente-info"><div class="vente-name">${h(v.titre||'Vente')}</div><div class="vente-buyer">${h(v.acheteur||'—')}</div></div><div class="vente-right"><div class="vente-price">${toNumber(v.prix)}€</div><div class="vente-date">${h(v.date||'—')}</div><span class="badge badge-${sc} vente-status-short" title="${h(v.statut||'')}">${h(st)}</span></div></div>`;}).join('');
+    }
+  }
+  buildWeeklyChart();
+}
+function getImportActionMode(){
+  const vals=importBuffer.filter(r=>r.ok&&r.kind!=='info');
+  const hasNewAnnonce=vals.some(r=>r.kind==='annonce'&&!DB.annonces.some(old=>sameAnnonce(old,r.obj)));
+  const hasNewVente=vals.some(r=>r.kind==='vente'&&!DB.ventes.some(old=>sameVente(old,r.obj)));
+  return (hasNewAnnonce||hasNewVente)?'add':'update';
+}
+function importButtonLabel(){
+  return getImportActionMode()==='add'?'✅ Ajout de nouvelles données':'✅ Mettre à jour';
+}
+function renderImportPreview(){
+  const preview=document.getElementById('importPreview');
+  const actionable=importBuffer.filter(r=>r.ok&&r.kind!=='info');
+  const infos=importBuffer.filter(r=>r.ok&&r.kind==='info');
+  const annonces=actionable.filter(r=>r.kind==='annonce').length;
+  const ventes=actionable.filter(r=>r.kind==='vente').length;
+  const err=importBuffer.filter(r=>!r.ok);
+  preview.innerHTML=`<div style="font-size:12px;color:var(--text);margin-bottom:8px"><strong>${annonces}</strong> annonce(s) · <strong>${ventes}</strong> vente(s) · <strong style="color:var(--coral)">${err.length}</strong> erreur(s)</div>`+
+    infos.map(r=>`<div class="import-preview-row import-preview-ok">✅ ${h(r.label)}</div>`).join('')+
+    actionable.slice(0,8).map(r=>`<div class="import-preview-row import-preview-ok">✅ ${h(r.label)}</div>`).join('')+
+    err.slice(0,4).map(r=>`<div class="import-preview-row import-preview-err">❌ ${h(r.label)}</div>`).join('')+
+    (actionable.length>8?`<div style="font-size:11px;color:var(--muted);margin-top:4px">... et ${actionable.length-8} autres données</div>`:'');
+  const btn=document.getElementById('btnImportConfirm');
+  if(btn){
+    btn.style.display=actionable.length>0?'inline-flex':'none';
+    btn.textContent=actionable.length>0?importButtonLabel():'✅ Mettre à jour';
+  }
+}
+function confirmImport(){
+  const vals=importBuffer.filter(r=>r.ok&&r.kind!=='info');
+  const annonces=vals.filter(r=>r.kind==='annonce').map(r=>r.obj);
+  const ventes=vals.filter(r=>r.kind==='vente').map(r=>r.obj);
+  const modeBefore=getImportActionMode();
+  const aStats=mergeImportedAnnonces(annonces);
+  const vStats=mergeImportedVentes(ventes);
+  DB.meta.lastImport=new Date().toISOString();
+  save();closeModal('modalImport');refreshAll();
+  const base=modeBefore==='add'?'✅ Ajout de nouvelles données':'✅ Mise à jour effectuée';
+  notify(`${base} : ${aStats.added} ajoutée(s), ${aStats.updated} article(s) mis à jour, ${vStats.added} vente(s).`);
+  if(aStats.added+vStats.added>0 || aStats.updated>0)openSetupGoals();
+  if(aStats.newLikes>0)setTimeout(()=>notifyEvent('likes',`❤️ ${aStats.newLikes} nouveau(x) like(s)/favori(s)`),900);
+  if(aStats.newMessages>0)setTimeout(()=>notifyEvent('messages',`✉️ ${aStats.newMessages} nouveau(x) message(s)`),1400);
+}
+
+
+
+
+// ===================== PATCH v13 : consignes import + stats + filtres ventes =====================
+function renderLastImportInfo(){
+  const el=document.getElementById('lastImportInfo');
+  if(!el)return;
+  const d=DB.meta&&DB.meta.lastImport?new Date(DB.meta.lastImport):null;
+  el.textContent=d?'Dernière actualisation : '+d.toLocaleString('fr-FR'):'';
+}
+function percentChangeText(current, previous, label){
+  const cur=Number(current)||0;
+  const prev=Number(previous)||0;
+  const word=label||'données';
+  if(prev===0 && cur===0)return {text:'0% '+word+' / mois dernier',cls:''};
+  if(prev===0 && cur>0)return {text:'+100% '+word+' / mois dernier',cls:'up'};
+  const pct=Math.round(((cur-prev)/prev)*100);
+  return {text:(pct>0?'+':'')+pct+'% '+word+' / mois dernier',cls:pct>0?'up':(pct<0?'down':'')};
+}
+function renderPerfRows(rows){
+  return rows.map(p=>`<div class="perf-row"><div class="perf-row-top"><span class="perf-row-label">${p.l}</span><span style="color:${p.c};font-family:'DM Mono',monospace;font-size:11px">${p.sub||p.v+p.s}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${Math.max(0,Math.min(100,p.v))}%;background:linear-gradient(90deg,${p.c},${p.c}cc)"></div></div></div>`).join('');
+}
+function renderOverview(){
+  normalizeDB();
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  const pm=m===0?11:m-1;
+  const py=m===0?y-1:y;
+  const vm=getMonthSales(y,m);
+  const vPrev=getMonthSales(py,pm);
+  const rev=vm.reduce((s,v)=>s+toNumber(v.prix),0);
+  const revPrev=vPrev.reduce((s,v)=>s+toNumber(v.prix),0);
+  const allVentes=(DB.ventes||[]);
+  const tot=allVentes.length;
+  const totalRev=allVentes.reduce((s,v)=>s+toNumber(v.prix),0);
+  const pan=tot>0?(totalRev/tot).toFixed(0):0;
+  const visibleAnnonces=(DB.annonces||[]).filter(a=>String(a.statut||'').toLowerCase()!=='vendu');
+  const act=visibleAnnonces.filter(a=>a.statut==='Actif').length;
+  document.getElementById('statRevenusMois').textContent=rev.toFixed(0)+'€';
+  document.getElementById('statAnnonces').textContent=act;
+  document.getElementById('statVentesMois').textContent=vm.length;
+  document.getElementById('statPanier').textContent=pan+'€';
+  setStatChange('statRevenusChange',percentChangeText(rev,revPrev,'revenus'));
+  setStatChange('statVentesChange',percentChangeText(vm.length,vPrev.length,'ventes'));
+  const hasData=(DB.annonces||[]).length>0||(DB.ventes||[]).length>0;
+  const importAlert=document.getElementById('alerteImport');if(importAlert)importAlert.style.display=hasData?'none':'flex';
+  const alertes=[];
+  const sv=visibleAnnonces.filter(a=>a.statut==='Actif'&&(parseInt(a.vues)||0)===0);
+  if(sv.length)alertes.push(`<div class="alert alert-warn"><span style="font-size:15px">⚡</span><div class="alert-text"><strong>${sv.length} annonce(s)</strong> sans aucune vue.</div></div>`);
+  const vl=visibleAnnonces.filter(a=>a.statut==='Actif'&&Math.floor((Date.now()-new Date(a.date||Date.now()))/86400000)>14);
+  if(vl.length)alertes.push(`<div class="alert alert-warn"><span style="font-size:15px">📅</span><div class="alert-text"><strong>${vl.length} annonce(s)</strong> en ligne depuis +14 jours.</div></div>`);
+  const alertsEl=document.getElementById('alertesContainer');if(alertsEl)alertsEl.innerHTML=alertes.join('');
+  const oR=DB.profil.objRevenu,oV=DB.profil.objVentes;
+  const perf=document.getElementById('perfSection');
+  if(perf){
+    const panProgress=Number(pan)>0?Math.min(100,Math.round((Number(pan)/50)*100)):0;
+    perf.innerHTML=renderPerfRows([
+      {l:'Panier moyen',v:panProgress,s:'%',c:'var(--teal)',sub:tot>0?`${pan}€ / vente`:'Aucune vente'},
+      {l:'Objectif revenus',v:oR>0?Math.min(100,Math.round(rev/oR*100)):0,s:'%',c:'var(--gold)',sub:oR>0?`${rev.toFixed(0)}€ / ${oR}€`:'Non défini'},
+      {l:'Objectif ventes',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
+    ]);
+  }
+  const lv=allVentes.slice(0,4);
+  const last=document.getElementById('lastVentes');
+  if(last){
+    if(!lv.length){last.innerHTML='<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Aucune vente</div></div>';}
+    else{
+      last.innerHTML=lv.map(v=>{const st=typeof shortSaleStatus==='function'?shortSaleStatus(v.statut):String(v.statut||'Vendu');const sc=typeof statusColorClass==='function'?statusColorClass(v.statut):'gray';return`<div class="vente-row"><div class="vente-thumb">${gi(v.cat||'📦 Autre')}</div><div class="vente-info"><div class="vente-name">${h(v.titre||'Vente')}</div><div class="vente-buyer">${h(v.acheteur||'—')}</div></div><div class="vente-right"><div class="vente-price">${toNumber(v.prix)}€</div><div class="vente-date">${h(v.date||'—')}</div><span class="badge badge-${sc} vente-status-short" title="${h(v.statut||'')}">${h(st)}</span></div></div>`;}).join('');
+    }
+  }
+  buildWeeklyChart();
+}
+
+let currentVenteFilter='';
+function canonicalSaleStatus(statut){
+  const s=shortSaleStatus(statut);
+  if(s==='Commande finalisée')return 'Livré';
+  return s;
+}
+function ensureVenteTabs(){
+  const panel=document.getElementById('panel-ventes');
+  if(!panel || document.getElementById('venteTabs'))return;
+  const header=panel.querySelector('.page-header');
+  if(!header)return;
+  const tabs=document.createElement('div');
+  tabs.className='tabs-scroll';
+  tabs.id='venteTabs';
+  tabs.innerHTML=`
+    <div class="tab active" onclick="filterVentes('',this)">Toutes</div>
+    <div class="tab" onclick="filterVentes('Livré',this)">Livrées</div>
+    <div class="tab" onclick="filterVentes('Expédié',this)">Expédiées</div>
+    <div class="tab" onclick="filterVentes('En transit',this)">En transit</div>
+    <div class="tab" onclick="filterVentes('En attente',this)">En attente</div>`;
+  header.insertAdjacentElement('afterend',tabs);
+}
+function filterVentes(f,el){
+  currentVenteFilter=f||'';
+  document.querySelectorAll('#venteTabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderVentes();
+}
+function renderVentes(){
+  ensureVenteTabs();
+  const el=document.getElementById('ventesTable');
+  const all=DB.ventes||[];
+  const list=all.filter(v=>!currentVenteFilter || canonicalSaleStatus(v.statut)===currentVenteFilter);
+  const n=all.length;
+  const tot=all.reduce((s,v)=>s+toNumber(v.prix),0).toFixed(0);
+  const livre=all.filter(v=>canonicalSaleStatus(v.statut)==='Livré').length;
+  const exp=all.filter(v=>canonicalSaleStatus(v.statut)==='Expédié').length;
+  const transit=all.filter(v=>canonicalSaleStatus(v.statut)==='En transit').length;
+  const sub=document.getElementById('ventesSub');if(sub)sub.textContent=`Ensemble des ventes · ${n} ventes · ${tot}€ total · ${livre} livrées · ${exp} expédiées · ${transit} en transit`;
+  const badge=document.getElementById('badgeVentes');if(badge){badge.textContent=n;badge.style.display=n>0?'block':'none';}
+  if(!el)return;
+  if(!n){el.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Aucune vente</div><div class="empty-sub">Ajoutez vos ventes ou importez vos données Vinted.</div></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Aucune vente trouvée</div><div class="empty-sub">Changez de catégorie pour voir d’autres ventes.</div></div>';return;}
+  el.innerHTML=list.map(v=>{
+    const st=shortSaleStatus(v.statut);
+    const sc=statusColorClass(v.statut);
+    return`<div class="vente-row">
+      <div class="vente-thumb">${gi(v.cat||'📦 Autre')}</div>
+      <div class="vente-info"><div class="vente-name">${h(v.titre||'Vente')}</div><div class="vente-buyer">${h(v.acheteur||'—')}</div></div>
+      <div class="vente-right"><div class="vente-price">${toNumber(v.prix)}€</div><div class="vente-date">${h(v.date||'—')}</div><span class="badge badge-${sc} vente-status-short" title="${h(v.statut||'')}">${h(st)}</span><button class="btn btn-sm btn-danger" style="margin-top:5px;width:100%;justify-content:center" onclick="deleteVente('${v.id}')">✕</button></div>
+    </div>`;
+  }).join('');
+}
+function renderAnnonces(){
+  normalizeDB();
+  if(currentFilter==='Vendu')currentFilter='';
+  const search=(document.getElementById('searchAnnonces')?.value||'').toLowerCase();
+  const visible=DB.annonces.filter(a=>String(a.statut||'').toLowerCase()!=='vendu');
+  const list=visible.filter(a=>{const mF=!currentFilter||a.statut===currentFilter;const mS=!search||String(a.titre||'').toLowerCase().includes(search);return mF&&mS;});
+  const n=visible.length,act=visible.filter(a=>a.statut==='Actif').length,res=visible.filter(a=>a.statut==='Réservé').length,ina=visible.filter(a=>a.statut==='Inactif').length;
+  const sub=document.getElementById('annoncesSub');if(sub)sub.textContent=`Ensemble des annonces · ${n} visibles · ${act} actives · ${res} réservées · ${ina} inactives`;
+  const badge=document.getElementById('badgeAnnonces');if(badge){badge.textContent=n;badge.style.display=n>0?'block':'none';}
+  const el=document.getElementById('annoncesTable');
+  if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏷</div><div class="empty-title">Aucune annonce trouvée</div><div class="empty-sub">Les annonces vendues sont masquées ici.</div></div>';renderPrixSuggestions();return;}
+  el.innerHTML=list.map(a=>{
+    const age=Math.floor((Date.now()-new Date(a.date||Date.now()))/86400000);
+    const sc={Actif:'green',Inactif:'red',Réservé:'yellow'}[a.statut]||'gray';
+    const url=safeURL(a.lien);
+    const link=url?`<div class="annonce-link"><a href="${h(url)}" target="_blank" rel="noopener">Lien article ↗</a></div>`:'';
+    return`<div class="annonce-row">
+      <div class="annonce-thumb">${gi(a.cat)}</div>
+      <div class="annonce-info">
+        <div class="annonce-name">${h(a.titre)}</div>
+        <div class="annonce-meta">${age}j · ${parseInt(a.vues)||0} vues · ${parseInt(a.favoris)||0} ♡ · ${parseInt(a.messages)||0} msg</div>
+        ${link}
+      </div>
+      <div class="annonce-right">
+        <div class="annonce-price">${toNumber(a.prix)}€</div>
+        <span class="badge badge-${sc} annonce-status" style="font-size:9px">${h(a.statut)}</span>
+      </div>
+      <div class="annonce-actions">
+        <button class="btn btn-sm" onclick="copyArticleMsg('${a.id}')" title="Message">💬</button>
+        <button class="btn btn-sm" onclick="openModalEdit('${a.id}')" title="Modifier">✏️</button>
+        <button class="btn btn-sm btn-success" onclick="markSold('${a.id}')" title="Marquer vendu">✔</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAnnonce('${a.id}')" title="Supprimer">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  renderPrixSuggestions();
+}
+const oldRefreshAll_v13=refreshAll;
+refreshAll=function(){
+  oldRefreshAll_v13.apply(this,arguments);
+  ensureVenteTabs();
+};
+
+
+// ===================== INIT =====================
+window.onload=function(){
+  setImportType('annonces');
+  document.getElementById('vDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('authScreen').addEventListener('keydown',function(e){
+    if(e.key==='Enter'){
+      e.preventDefault();
+      authSubmit();
+    }
+  });
+  bootAuth();
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+};
+
+// ===================== PATCH v21 SUPABASE BASE v13 : comptes en ligne + essai 24h + admin =====================
+(function(){
+  let sb=null;
+  let sbReady=false;
+  let sbUser=null;
+  let sbProfile=null;
+
+  const CONFIG_URL='/.netlify/functions/supabase-config';
+  const CHECK_URL='/.netlify/functions/check-access';
+  const ADMIN_USERS_URL='/.netlify/functions/admin-users';
+  const ADMIN_STATUS_URL='/.netlify/functions/update-user-status';
+
+  function el(id){return document.getElementById(id);}
+  function toast(msg,err){ if(typeof notify==='function') notify(msg,!!err); }
+
+  function showAccess(title,msg){
+    const screen=el('accessScreen');
+    if(el('accessTitle')) el('accessTitle').textContent=title||'Accès terminé';
+    if(el('accessMessage')) el('accessMessage').textContent=msg||'Ton accès est terminé.';
+    if(screen) screen.classList.add('open');
+  }
+  function hideAccess(){
+    const screen=el('accessScreen');
+    if(screen) screen.classList.remove('open');
+  }
+
+  async function initSupabaseV21(){
+    if(sbReady && sb) return sb;
+    if(!window.supabase) throw new Error('Librairie Supabase non chargée.');
+    const r=await fetch(CONFIG_URL);
+    const cfg=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(cfg.error||'Configuration Supabase introuvable.');
+    if(!cfg.url || !cfg.anonKey) throw new Error('SUPABASE_URL ou SUPABASE_ANON_KEY manque dans Netlify.');
+    sb=window.supabase.createClient(cfg.url,cfg.anonKey);
+    sbReady=true;
+    return sb;
+  }
+
+  async function getTokenHeader(){
+    const client=await initSupabaseV21();
+    const {data}=await client.auth.getSession();
+    const token=data?.session?.access_token;
+    if(!token) throw new Error('Session Supabase introuvable.');
+    return {'Content-Type':'application/json','Authorization':'Bearer '+token};
+  }
+
+  async function postServer(url,payload={}){
+    const headers=await getTokenHeader();
+    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error||('Erreur serveur '+r.status));
+    return data;
+  }
+
+  function emptyDbSafe(){
+    try{return emptyDB();}catch(_){
+      return {profil:{nom:'',pseudo:'',objRevenu:0,objVentes:0,notifLikes:true,notifMessages:true,notifVentes:true,theme:'dark'},annonces:[],ventes:[],meta:{lastImport:'',notifications:[]}};
+    }
+  }
+
+  async function checkAccess(){
+    const data=await postServer(CHECK_URL,{});
+    sbProfile=data.profile||null;
+    return data;
+  }
+
+  async function loadCloudDB(){
+    const client=await initSupabaseV21();
+    const {data,error}=await client.from('user_data').select('data').eq('user_id',sbUser.id).maybeSingle();
+    if(error) throw error;
+    DB=(data && data.data && Object.keys(data.data).length) ? data.data : emptyDbSafe();
+    normalizeDB();
+    if(sbProfile){
+      DB.profil.nom=DB.profil.nom || sbProfile.nom || (sbUser.email||'').split('@')[0];
+    }
+  }
+
+  async function saveCloudDB(){
+    if(!sb || !sbUser) return;
+    try{
+      normalizeDB();
+      const payload={user_id:sbUser.id,data:DB,updated_at:new Date().toISOString()};
+      const {error}=await sb.from('user_data').upsert(payload,{onConflict:'user_id'});
+      if(error) console.error('saveCloudDB',error);
+    }catch(e){console.error('saveCloudDB',e);}
+  }
+
+  window.save=function(){
+    try{ if(currentUserEmail) localStorage.setItem('vestiairepro_backup_'+currentUserEmail,JSON.stringify(DB)); }catch(_){}
+    saveCloudDB();
+  };
+  window.load=function(){};
+
+  function accessMessage(profile){
+    const st=profile?.status||'expired';
+    if(st==='blocked') return {title:'Accès bloqué',message:'Ton accès à VestiairePro a été désactivé.'};
+    if(st==='expired') return {title:'Essai gratuit terminé',message:'Ton essai gratuit de 24h est terminé. Pour continuer, demande l’accès ou prends l’abonnement.'};
+    return {title:'Accès non disponible',message:'Ton compte n’a pas accès à VestiairePro pour le moment.'};
+  }
+
+  async function finishLogin(user){
+    sbUser=user;
+    currentUserEmail=(user.email||'').toLowerCase();
+    currentUserId=user.id;
+
+    const access=await checkAccess();
+    if(!access.allowed){
+      hideAuth();
+      const m=accessMessage(access.profile);
+      showAccess(m.title,m.message);
+      return;
+    }
+
+    await loadCloudDB();
+    hideAccess();
+    hideAuth();
+    applyTheme(DB.profil.theme);
+    refreshAll();
+    maybeOpenOnboarding();
+    setTimeout(addAdminButton,100);
+  }
+
+  function signInError(error){
+    const msg=String(error?.message||'');
+    if(/invalid login credentials/i.test(msg)) return 'Adresse mail ou mot de passe incorrect.';
+    if(/email not confirmed/i.test(msg)) return 'Email non confirmé. Va voir tes mails ou désactive la confirmation email dans Supabase pour tester.';
+    return msg || 'Connexion impossible.';
+  }
+
+  window.authSubmit=async function(){
+    clearAuthError();
+    const email=el('authEmail').value.trim().toLowerCase();
+    const password=el('authPassword').value;
+    const password2=el('authPassword2')?.value||'';
+    const name=el('authName')?.value.trim()||'';
+    const btn=el('authSubmitBtn');
+
+    if(!validEmail(email)){showAuthError('Adresse mail invalide.');el('authEmail').focus();return;}
+    if(password.length<6){showAuthError('Mot de passe trop court : 6 caractères minimum.');el('authPassword').focus();return;}
+    if(authMode==='register' && password!==password2){showAuthError('Les deux mots de passe ne correspondent pas.');el('authPassword2').focus();return;}
+
+    try{
+      if(btn){btn.disabled=true;btn.textContent=authMode==='register'?'Création...':'Connexion...';}
+      const client=await initSupabaseV21();
+
+      if(authMode==='register'){
+        const {data,error}=await client.auth.signUp({email,password,options:{data:{nom:name||email.split('@')[0]}}});
+        if(error) throw error;
+        if(!data.session){
+          showAuthError('Compte créé. Vérifie tes mails pour confirmer ton compte, puis reconnecte-toi.');
+          toast('📩 Vérifie tes mails');
+          return;
+        }
+        await finishLogin(data.user);
+        toast('✅ Compte créé — essai 24h activé');
+        setTimeout(()=>openModal('modalAddChoice'),400);
+      }else{
+        const {data,error}=await client.auth.signInWithPassword({email,password});
+        if(error){showAuthError(signInError(error));return;}
+        await finishLogin(data.user);
+        toast('✅ Connecté');
+      }
+    }catch(e){
+      console.error(e);
+      showAuthError('Erreur : '+(e.message||e));
+      toast('⚠️ Erreur Supabase',true);
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=authMode==='register'?'Créer mon compte':'Se connecter';}
+    }
+  };
+
+  window.bootAuth=async function(){
+    try{
+      const client=await initSupabaseV21();
+      const {data,error}=await client.auth.getSession();
+      if(error) throw error;
+
+      if(data.session && data.session.user){
+        await finishLogin(data.session.user);
+      }else{
+        currentUserEmail='';currentUserId='';sbUser=null;sbProfile=null;DB=emptyDbSafe();
+        applyTheme('dark');
+        hideAccess();
+        showAuth();
+      }
+    }catch(e){
+      console.error(e);
+      currentUserEmail='';currentUserId='';sbUser=null;sbProfile=null;DB=emptyDbSafe();
+      hideAccess();
+      showAuth();
+      showAuthError('Supabase n’est pas connecté : vérifie SUPABASE_URL et SUPABASE_ANON_KEY dans Netlify.');
+    }
+  };
+
+  window.logout=async function(){
+    try{await saveCloudDB();}catch(_){}
+    try{if(sb) await sb.auth.signOut();}catch(_){}
+    currentUserEmail='';currentUserId='';sbUser=null;sbProfile=null;DB=emptyDbSafe();
+    closeModal('modalProfil');
+    hideAccess();
+    showAuth();
+    toast('Déconnecté');
+  };
+
+  function statusBadge(){
+    if(!sbProfile)return '';
+    const end=sbProfile.trial_end?new Date(sbProfile.trial_end).toLocaleString('fr-FR'):'—';
+    return `<div class="supabase-badge">Supabase · statut : ${escapeHTML(sbProfile.status||'trial')} · fin essai : ${escapeHTML(end)}</div>`;
+  }
+
+  const oldOpenProfil=window.openProfil || (typeof openProfil!=='undefined'?openProfil:null);
+  window.openProfil=function(){
+    if(oldOpenProfil) oldOpenProfil();
+    setTimeout(()=>{
+      const acc=el('accountEmail');
+      if(acc && sbProfile){
+        let b=el('supabaseStatusBadge');
+        if(!b){b=document.createElement('div');b.id='supabaseStatusBadge';acc.parentElement.appendChild(b);}
+        b.innerHTML=statusBadge();
+      }
+      addAdminButton();
+    },80);
+  };
+
+  function addAdminButton(){
+    const modal=el('modalProfil');
+    if(!modal)return;
+    let btn=el('btnOpenAdmin');
+    if(sbProfile && sbProfile.is_admin){
+      if(!btn){
+        btn=document.createElement('button');
+        btn.id='btnOpenAdmin';
+        btn.className='btn btn-full btn-primary btn-admin';
+        btn.textContent='👑 Admin utilisateurs';
+        btn.onclick=function(){openModal('modalAdmin');loadAdminUsers();};
+        const logoutBtn=Array.from(modal.querySelectorAll('button')).find(b=>String(b.textContent||'').includes('Se déconnecter'));
+        if(logoutBtn && logoutBtn.parentElement) logoutBtn.parentElement.insertBefore(btn,logoutBtn);
+      }
+    }else if(btn){btn.remove();}
+  }
+
+  window.loadAdminUsers=async function(){
+    const box=el('adminUsersList');
+    if(box)box.innerHTML='<div class="empty"><div class="empty-title">Chargement...</div></div>';
+    try{
+      const data=await postServer(ADMIN_USERS_URL,{});
+      const users=data.users||[];
+      if(!users.length){box.innerHTML='<div class="empty"><div class="empty-title">Aucun utilisateur</div></div>';return;}
+      box.innerHTML=users.map(u=>{
+        const trialEnd=u.trial_end?new Date(u.trial_end).toLocaleString('fr-FR'):'—';
+        const last=u.last_login?new Date(u.last_login).toLocaleString('fr-FR'):'—';
+        const st=u.status||'trial';
+        const cls=st==='paid'?'green':st==='blocked'?'red':st==='expired'?'yellow':'teal';
+        return `<div class="admin-user">
+          <div class="admin-user-top">
+            <div>
+              <div class="admin-email">${escapeHTML(u.email||'—')}</div>
+              <div class="admin-meta">Statut : ${escapeHTML(st)} · Fin essai : ${escapeHTML(trialEnd)}<br>Dernière connexion : ${escapeHTML(last)}</div>
+            </div>
+            <span class="badge badge-${cls}">${escapeHTML(st)}</span>
+          </div>
+          <div class="admin-actions">
+            <button class="btn btn-sm" onclick="updateUserStatus('${u.id}','trial')">Trial 24h</button>
+            <button class="btn btn-sm btn-primary" onclick="updateUserStatus('${u.id}','paid')">Paid</button>
+            <button class="btn btn-sm" onclick="updateUserStatus('${u.id}','expired')">Expiré</button>
+            <button class="btn btn-sm btn-danger" onclick="updateUserStatus('${u.id}','blocked')">Bloquer</button>
+          </div>
+        </div>`;
+      }).join('');
+    }catch(e){
+      console.error(e);
+      if(box)box.innerHTML='<div class="alert alert-warn"><span>⚠️</span><div class="alert-text">'+escapeHTML(e.message||'Erreur admin')+'</div></div>';
+    }
+  };
+
+  window.updateUserStatus=async function(userId,status){
+    try{
+      await postServer(ADMIN_STATUS_URL,{userId,status});
+      toast('✅ Statut mis à jour');
+      loadAdminUsers();
+    }catch(e){
+      console.error(e);
+      toast('Erreur admin : '+(e.message||e),true);
+    }
+  };
+})();
+
+
+// ===================== PATCH v22 : abonnement 4,99€/mois + message essai 1 jour =====================
+(function(){
+  const CREATE_CHECKOUT_URL='/.netlify/functions/create-checkout-session';
+  const VERIFY_CHECKOUT_URL='/.netlify/functions/verify-checkout';
+
+  function v22Toast(msg,err){ if(typeof notify==='function') notify(msg,!!err); }
+  async function v22AuthHeader(){
+    if(!window.supabase) throw new Error('Supabase non chargé.');
+    if(typeof initSupabaseV21==='function'){}
+    // On récupère la session depuis le client Supabase déjà créé par v21.
+    const cfgRes = await fetch('/.netlify/functions/supabase-config');
+    const cfg = await cfgRes.json().catch(()=>({}));
+    if(!cfg.url || !cfg.anonKey) throw new Error('Supabase non configuré.');
+    const client = window.__v22sb || (window.__v22sb = window.supabase.createClient(cfg.url, cfg.anonKey));
+    const {data}=await client.auth.getSession();
+    const token=data?.session?.access_token;
+    if(!token) throw new Error('Connecte-toi avant de choisir un abonnement.');
+    return {'Content-Type':'application/json','Authorization':'Bearer '+token};
+  }
+
+  async function v22Post(url,payload={}){
+    const headers=await v22AuthHeader();
+    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error||('Erreur serveur '+r.status));
+    return data;
+  }
+
+  window.startSubscription=async function(){
+    try{
+      v22Toast('Création du paiement...');
+      const data=await v22Post(CREATE_CHECKOUT_URL,{});
+      if(!data.url) throw new Error('Aucun lien Stripe renvoyé.');
+      window.location.href=data.url;
+    }catch(e){
+      console.error(e);
+      v22Toast('Abonnement indisponible : '+(e.message||e),true);
+      const box=document.getElementById('accessMessage');
+      if(box) box.textContent='Le paiement n’est pas encore configuré. Vérifie STRIPE_SECRET_KEY et STRIPE_PRICE_ID dans Netlify.';
+    }
+  };
+
+  async function verifySubscriptionReturn(){
+    const params=new URLSearchParams(window.location.search);
+    const sessionId=params.get('session_id');
+    if(!sessionId)return;
+    try{
+      v22Toast('Vérification du paiement...');
+      await v22Post(VERIFY_CHECKOUT_URL,{session_id:sessionId});
+      v22Toast('✅ Abonnement activé');
+      const clean=window.location.origin+window.location.pathname;
+      window.history.replaceState({},document.title,clean);
+      setTimeout(()=>window.location.reload(),900);
+    }catch(e){
+      console.error(e);
+      v22Toast('Paiement non vérifié : '+(e.message||e),true);
+    }
+  }
+
+  const oldBootV22=window.bootAuth;
+  if(oldBootV22){
+    window.bootAuth=async function(){
+      await oldBootV22.apply(this,arguments);
+      setTimeout(verifySubscriptionReturn,500);
+    };
+  }
+
+  const oldFinishLoginToast=setTimeout;
+  // Message visible juste après création du compte : on intercepte authSubmit côté register en ajoutant une modale après le flux.
+  const oldAuthSubmitV22=window.authSubmit;
+  if(oldAuthSubmitV22){
+    window.authSubmit=async function(){
+      const wasRegister=(window.authMode==='register' || (typeof authMode!=='undefined' && authMode==='register'));
+      await oldAuthSubmitV22.apply(this,arguments);
+      if(wasRegister){
+        setTimeout(()=>{
+          const authOpen=document.getElementById('authScreen')?.classList.contains('open');
+          const accessOpen=document.getElementById('accessScreen')?.classList.contains('open');
+          if(!authOpen && !accessOpen){
+            v22Toast('Essai gratuit activé pendant 1 jour seulement');
+            if(typeof openModal==='function') openModal('modalSubscribe');
+          }
+        },900);
+      }
+    };
+  }
+
+  // Ajout bouton abonnement dans le profil pour les comptes non payés.
+  const oldOpenProfilV22=window.openProfil;
+  if(oldOpenProfilV22){
+    window.openProfil=function(){
+      oldOpenProfilV22.apply(this,arguments);
+      setTimeout(()=>{
+        const modal=document.getElementById('modalProfil');
+        if(!modal || document.getElementById('btnSubscribeV22'))return;
+        const btn=document.createElement('button');
+        btn.id='btnSubscribeV22';
+        btn.className='btn btn-full btn-primary';
+        btn.style.marginTop='8px';
+        btn.textContent='💳 Choisir l’abonnement 4,99€/mois';
+        btn.onclick=function(){openModal('modalSubscribe');};
+        const logoutBtn=Array.from(modal.querySelectorAll('button')).find(b=>String(b.textContent||'').includes('Se déconnecter'));
+        if(logoutBtn && logoutBtn.parentElement) logoutBtn.parentElement.insertBefore(btn,logoutBtn);
+      },120);
+    };
+  }
+})();
+
+</script>
+</body>
+</html>
