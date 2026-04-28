@@ -9,7 +9,7 @@
 <meta name="description" content="VestiairePro — tableau de bord personnel pour suivre annonces, ventes, revenus et statistiques.">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
-<title>VestiairePro v22 Abonnement</title>
+<title>VestiairePro v23</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -455,6 +455,27 @@ body.light-mode .topbar-avatar{color:#fff;}
 .subscription-li{font-size:13px;color:var(--text);display:flex;gap:8px;align-items:flex-start;line-height:1.35;}
 .trial-note{font-size:12px;color:var(--warning);line-height:1.45;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.22);border-radius:12px;padding:10px;margin:10px 0;}
 
+
+/* PATCH v23 — onboarding, alertes supprimables, abonnement */
+.alert{position:relative;}
+.alert-dismiss{
+  position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:999px;
+  border:1px solid var(--border);background:var(--bg3);color:var(--muted);
+  display:flex;align-items:center;justify-content:center;font-weight:800;
+  cursor:pointer;font-size:14px;line-height:1;
+}
+.alert-dismiss:hover{color:var(--coral);border-color:rgba(255,107,107,.45);}
+.alert .alert-text{padding-right:32px;}
+.pricing-choice{
+  border:1px solid var(--border);border-radius:14px;background:var(--bg3);
+  padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.pricing-choice-main{border-color:rgba(0,180,166,.45);background:rgba(0,180,166,.08);}
+.pricing-title{font-weight:800;font-size:14px;color:var(--text);}
+.pricing-sub{font-size:12px;color:var(--muted);line-height:1.35;margin-top:3px;}
+.pricing-price{font-family:'Syne',sans-serif;font-weight:800;color:var(--teal);font-size:20px;white-space:nowrap;text-align:right;}
+.pricing-price span{display:block;color:var(--muted);font-size:11px;font-family:'Instrument Sans',sans-serif;font-weight:600;}
+
 </style>
 </head>
 <body>
@@ -477,7 +498,7 @@ body.light-mode .topbar-avatar{color:#fff;}
     <div class="form-group" id="authPassword2Group" style="display:none"><label class="form-label">Confirmer le mot de passe</label><div class="password-wrap"><input class="form-input" id="authPassword2" type="password" placeholder="Retape le mot de passe" autocomplete="new-password"><button class="password-eye" type="button" onclick="togglePassword('authPassword2',this)" aria-label="Afficher le mot de passe">👁</button></div></div>
     <div class="auth-error" id="authError" aria-live="polite"></div>
     <button class="btn btn-primary btn-full" id="authSubmitBtn" onclick="authSubmit()">Se connecter</button>
-    <div class="auth-foot">Version locale : chaque compte a ses données sur cet appareil/navigateur. N’utilise pas ton mot de passe Vinted.</div>
+    <div class="auth-foot">Version en ligne : tes données sont synchronisées entre tes appareils. N’utilise pas ton mot de passe Vinted.</div>
   </div>
 </div>
 
@@ -507,15 +528,28 @@ body.light-mode .topbar-avatar{color:#fff;}
     </div>
 
     <div class="subscription-card">
-      <div class="badge badge-teal">Accès complet</div>
-      <div class="subscription-price">4,99€ <span>/ mois</span></div>
-      <div class="trial-note">Ton essai est gratuit pendant 1 jour seulement. Après 24h, l’accès complet nécessite l’abonnement.</div>
-      <div class="subscription-list">
-        <div class="subscription-li">✅ Suivi des annonces, ventes, revenus et statistiques</div>
-        <div class="subscription-li">✅ Données synchronisées entre PC, iPhone et Android</div>
-        <div class="subscription-li">✅ Import / actualisation des données</div>
-        <div class="subscription-li">✅ Notifications et tableau de bord complet</div>
+      <div class="badge badge-teal">Offres disponibles</div>
+
+      <div style="display:grid;gap:10px;margin-top:10px">
+        <div class="pricing-choice">
+          <div>
+            <div class="pricing-title">Essai gratuit</div>
+            <div class="pricing-sub">Accès complet pendant 1 jour seulement.</div>
+          </div>
+          <div class="pricing-price">0€</div>
+        </div>
+
+        <div class="pricing-choice pricing-choice-main">
+          <div>
+            <div class="pricing-title">VestiairePro complet</div>
+            <div class="pricing-sub">Après l’essai : annonces, ventes, revenus, stats, synchronisation et notifications.</div>
+          </div>
+          <div class="pricing-price">4,99€<span>/mois</span></div>
+        </div>
       </div>
+
+      <div class="trial-note">Ton essai est gratuit pendant 1 jour seulement. Après 24h, l’accès complet nécessite l’abonnement.</div>
+
       <button class="btn btn-primary btn-full" onclick="startSubscription()">Choisir l’abonnement 4,99€/mois</button>
       <button class="btn btn-full" style="margin-top:8px" onclick="closeModal('modalSubscribe')">Continuer l’essai gratuit</button>
     </div>
@@ -553,7 +587,7 @@ body.light-mode .topbar-avatar{color:#fff;}
     <div class="form-group"><label class="form-label">Pseudo de vente</label><input class="form-input" id="oPseudo" placeholder="@ton_pseudo" autocomplete="off"></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Objectif revenus (€)</label><input class="form-input" id="oObjRevenu" type="number" inputmode="decimal" placeholder="500"></div>
-      <div class="form-group"><label class="form-label">Objectif ventes</label><input class="form-input" id="oObjVentes" type="number" inputmode="numeric" placeholder="20"></div>
+      <div class="form-group"><label class="form-label">Colis vendus</label><input class="form-input" id="oObjVentes" type="number" inputmode="numeric" placeholder="20"></div>
     </div>
     <button class="btn btn-primary btn-full" onclick="finishOnboarding()">Créer mon compte</button>
     <button class="btn btn-full" style="margin-top:8px" onclick="closeModal('modalOnboarding')">Plus tard</button>
@@ -694,7 +728,7 @@ body.light-mode .topbar-avatar{color:#fff;}
       <button class="btn btn-sm" onclick="closeModal('modalImport')">✕</button>
     </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6"><span style="color:var(--teal);font-weight:700">Sur Vinted</span> : va dans <strong style="color:var(--teal)">Paramètres → Confidentialité → Télécharger mes données</strong>.<br>Après la demande, va dans tes <strong style="color:var(--teal)">mails</strong>, télécharge le fichier <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;color:var(--teal)">.zip</code> reçu, puis reviens ici pour l’ajouter juste en dessous. VestiairePro récupère automatiquement annonces, ventes, vues, likes, messages et liens quand ils sont présents. Si tu importes un nouveau ZIP plus tard, les articles déjà présents sont actualisés au lieu d’être dupliqués.</p>
-    <div class="alert alert-info" style="margin-bottom:14px"><span style="font-size:15px">🔒</span><div class="alert-text">Le fichier est lu dans ton navigateur. Rien n’est envoyé sur un serveur.</div></div>
+    <div class="alert alert-info" style="margin-bottom:14px"><span style="font-size:15px">🔒</span><div class="alert-text">Le fichier est lu dans ton navigateur puis sauvegardé sur ton compte VestiairePro pour synchroniser tes données entre tes appareils.</div></div>
     <div id="lastImportInfo" style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:center"></div>
     <div class="import-zone" onclick="document.getElementById('csvInput').click()">
       <div style="font-size:30px;margin-bottom:8px">📦</div>
@@ -734,13 +768,13 @@ body.light-mode .topbar-avatar{color:#fff;}
     <span class="modal-handle"></span>
     <div style="text-align:center;font-size:42px;margin-bottom:8px">🎉</div>
     <div class="modal-title" style="text-align:center;margin-bottom:8px">Félicitations, tout est prêt !</div>
-    <p style="font-size:13px;color:var(--muted);text-align:center;line-height:1.5;margin-bottom:16px">Tes données sont ajoutées. Tu peux maintenant te fixer des objectifs pour suivre tes revenus et tes ventes du mois.</p>
+    <p style="font-size:13px;color:var(--muted);text-align:center;line-height:1.5;margin-bottom:16px">Tes données sont ajoutées. Tu peux maintenant te fixer des objectifs pour suivre tes revenus et tes colis vendus du mois.</p>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Objectif revenus (€)</label><input class="form-input" id="gObjRevenu" type="number" inputmode="decimal" placeholder="Ex : 500"></div>
-      <div class="form-group"><label class="form-label">Objectif ventes</label><input class="form-input" id="gObjVentes" type="number" inputmode="numeric" placeholder="Ex : 20"></div>
+      <div class="form-group"><label class="form-label">Colis vendus</label><input class="form-input" id="gObjVentes" type="number" inputmode="numeric" placeholder="Ex : 20"></div>
     </div>
     <div class="form-actions">
-      <button class="btn" onclick="closeModal('modalSetupGoals')">Plus tard</button>
+      <button class="btn" onclick="skipSetupGoalsV23()">Plus tard</button>
       <button class="btn btn-primary" onclick="saveSetupGoals()">🎯 Enregistrer mes objectifs</button>
     </div>
   </div>
@@ -760,7 +794,7 @@ body.light-mode .topbar-avatar{color:#fff;}
     <div class="form-group"><label class="form-label">Pseudo de vente</label><input class="form-input" id="pPseudo" placeholder="@marie_mode" autocomplete="off"></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Objectif revenus (€)</label><input class="form-input" id="pObjRevenu" type="number" inputmode="decimal" placeholder="2000"></div>
-      <div class="form-group"><label class="form-label">Objectif ventes</label><input class="form-input" id="pObjVentes" type="number" inputmode="numeric" placeholder="50"></div>
+      <div class="form-group"><label class="form-label">Colis vendus</label><input class="form-input" id="pObjVentes" type="number" inputmode="numeric" placeholder="50"></div>
     </div>
     <div class="section-label">🔔 Notifications</div>
     <div class="card" style="padding:10px 14px;margin-bottom:12px">
@@ -822,7 +856,7 @@ body.light-mode .topbar-avatar{color:#fff;}
       </div>
 
       <div class="alert alert-info" id="alerteImport"><span style="font-size:16px">💡</span><div class="alert-text"><strong>Bienvenue !</strong> Crée ton compte, importe ton export Vinted ou ajoute tes annonces manuellement.</div></div>
-      <div class="alert alert-info" id="privacyInfo"><span style="font-size:16px">🔒</span><div class="alert-text"><strong>Confidentialité :</strong> vos données sont enregistrées uniquement sur cet appareil. VestiairePro est un outil indépendant et non officiel.</div></div>
+      <div class="alert alert-info" id="privacyInfo"><span style="font-size:16px">🔒</span><div class="alert-text"><strong>Confidentialité :</strong> tes données sont synchronisées avec ton compte VestiairePro pour les retrouver sur tes appareils. VestiairePro est un outil indépendant et non officiel.</div></div>
       <div id="alertesContainer"></div>
 
       <!-- Revenus période -->
@@ -1305,7 +1339,7 @@ function renderOverview(){
   document.getElementById('perfSection').innerHTML=[
     {l:'Conversion',v:conv,s:'%',c:'var(--teal)'},
     {l:'Objectif revenus',v:oR>0?Math.min(100,Math.round(rev/oR*100)):0,s:'%',c:'var(--gold)',sub:oR>0?`${rev.toFixed(0)}€ / ${oR}€`:'Non défini'},
-    {l:'Objectif ventes',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
+    {l:'Colis vendus',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
   ].map(p=>`<div class="perf-row"><div class="perf-row-top"><span class="perf-row-label">${p.l}</span><span style="color:${p.c};font-family:'DM Mono',monospace;font-size:11px">${p.sub||p.v+p.s}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${p.v}%;background:linear-gradient(90deg,${p.c},${p.c}cc)"></div></div></div>`).join('');
   // Last ventes
   const lv=DB.ventes.slice(0,4);
@@ -2377,7 +2411,7 @@ function renderOverview(){
     perf.innerHTML=[
       {l:'Conversion',v:conv,s:'%',c:'var(--teal)'},
       {l:'Objectif revenus',v:oR>0?Math.min(100,Math.round(rev/oR*100)):0,s:'%',c:'var(--gold)',sub:oR>0?`${rev.toFixed(0)}€ / ${oR}€`:'Non défini'},
-      {l:'Objectif ventes',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
+      {l:'Colis vendus',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
     ].map(p=>`<div class="perf-row"><div class="perf-row-top"><span class="perf-row-label">${p.l}</span><span style="color:${p.c};font-family:'DM Mono',monospace;font-size:11px">${p.sub||p.v+p.s}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${p.v}%;background:linear-gradient(90deg,${p.c},${p.c}cc)"></div></div></div>`).join('');
   }
   const lv=(DB.ventes||[]).slice(0,4);
@@ -2491,7 +2525,7 @@ function renderOverview(){
     perf.innerHTML=renderPerfRows([
       {l:'Panier moyen',v:panProgress,s:'%',c:'var(--teal)',sub:tot>0?`${pan}€ / vente`:'Aucune vente'},
       {l:'Objectif revenus',v:oR>0?Math.min(100,Math.round(rev/oR*100)):0,s:'%',c:'var(--gold)',sub:oR>0?`${rev.toFixed(0)}€ / ${oR}€`:'Non défini'},
-      {l:'Objectif ventes',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
+      {l:'Colis vendus',v:oV>0?Math.min(100,Math.round(vm.length/oV*100)):0,s:'%',c:'var(--success)',sub:oV>0?`${vm.length} / ${oV}`:'Non défini'},
     ]);
   }
   const lv=allVentes.slice(0,4);
@@ -3011,6 +3045,193 @@ window.onload=function(){
       },120);
     };
   }
+})();
+
+
+// ===================== PATCH v23 : parcours 1ère connexion + alertes supprimables =====================
+(function(){
+  function v23Toast(msg,err){ if(typeof notify==='function') notify(msg,!!err); }
+  function v23HasData(){ return !!(DB && ((DB.annonces||[]).length || (DB.ventes||[]).length)); }
+
+  function v23EnsureMeta(){
+    normalizeDB();
+    DB.meta = DB.meta || {};
+    DB.meta.dismissedAlerts = DB.meta.dismissedAlerts || {};
+    return DB.meta;
+  }
+
+  function v23OpenFirstFlow(){
+    const meta=v23EnsureMeta();
+    if(meta.v23FirstFlowShown) return;
+    meta.v23FirstFlowShown=true;
+    save();
+    setTimeout(()=>{
+      closeModal('modalSubscribe');
+      closeModal('modalOnboarding');
+      openModal('modalAddChoice');
+      v23Toast('Bienvenue ! Ajoute tes données pour préparer ton tableau de bord.');
+    },650);
+  }
+
+  function v23MaybeStartFirstFlow(){
+    if(!currentUserEmail) return;
+    v23EnsureMeta();
+    if(!v23HasData()) v23OpenFirstFlow();
+  }
+
+  function v23AfterFirstData(){
+    const meta=v23EnsureMeta();
+    if(meta.v23GoalsShown || !v23HasData()) return;
+    meta.v23GoalsShown=true;
+    save();
+    setTimeout(()=>{
+      closeModal('modalAddChoice');
+      if(typeof openSetupGoals==='function') openSetupGoals();
+      else openModal('modalSetupGoals');
+      v23Toast('🎉 Félicitations, tout est prêt ! Fixe tes objectifs.');
+    },550);
+  }
+
+  window.skipSetupGoalsV23=function(){
+    const meta=v23EnsureMeta();
+    meta.v23SubscriptionShown=true;
+    save();
+    closeModal('modalSetupGoals');
+    setTimeout(()=>openModal('modalSubscribe'),250);
+  };
+
+  const oldSaveSetupGoalsV23=window.saveSetupGoals || (typeof saveSetupGoals!=='undefined'?saveSetupGoals:null);
+  window.saveSetupGoals=function(){
+    if(oldSaveSetupGoalsV23) oldSaveSetupGoalsV23.apply(this,arguments);
+    const meta=v23EnsureMeta();
+    meta.v23SubscriptionShown=true;
+    save();
+    setTimeout(()=>openModal('modalSubscribe'),450);
+  };
+
+  const oldConfirmImportV23=window.confirmImport || (typeof confirmImport!=='undefined'?confirmImport:null);
+  window.confirmImport=function(){
+    if(oldConfirmImportV23) oldConfirmImportV23.apply(this,arguments);
+    v23AfterFirstData();
+  };
+
+  const oldSaveAnnonceV23=window.saveAnnonce || (typeof saveAnnonce!=='undefined'?saveAnnonce:null);
+  window.saveAnnonce=function(){
+    if(oldSaveAnnonceV23) oldSaveAnnonceV23.apply(this,arguments);
+    v23AfterFirstData();
+  };
+
+  const oldSaveVenteV23=window.saveVente || (typeof saveVente!=='undefined'?saveVente:null);
+  window.saveVente=function(){
+    if(oldSaveVenteV23) oldSaveVenteV23.apply(this,arguments);
+    v23AfterFirstData();
+  };
+
+  const oldLoadDemoDataV23=window.loadDemoData || (typeof loadDemoData!=='undefined'?loadDemoData:null);
+  window.loadDemoData=function(){
+    if(oldLoadDemoDataV23) oldLoadDemoDataV23.apply(this,arguments);
+    v23AfterFirstData();
+  };
+
+  const oldAuthSubmitV23=window.authSubmit;
+  window.authSubmit=async function(){
+    const wasRegister=(window.authMode==='register' || (typeof authMode!=='undefined' && authMode==='register'));
+    await oldAuthSubmitV23.apply(this,arguments);
+    setTimeout(()=>{
+      const authOpen=document.getElementById('authScreen')?.classList.contains('open');
+      const accessOpen=document.getElementById('accessScreen')?.classList.contains('open');
+      if(!authOpen && !accessOpen){
+        if(wasRegister || !v23HasData()) v23MaybeStartFirstFlow();
+      }
+    },1200);
+  };
+
+  const oldBootAuthV23=window.bootAuth;
+  window.bootAuth=async function(){
+    await oldBootAuthV23.apply(this,arguments);
+    setTimeout(()=>{
+      const authOpen=document.getElementById('authScreen')?.classList.contains('open');
+      const accessOpen=document.getElementById('accessScreen')?.classList.contains('open');
+      if(!authOpen && !accessOpen) v23MaybeStartFirstFlow();
+    },1100);
+  };
+
+  // Alertes d’accueil supprimables : elles restent consultables dans la cloche de notifications.
+  window.dismissHomeAlertV23=function(key,msg){
+    const meta=v23EnsureMeta();
+    meta.dismissedAlerts[key]=true;
+    pushNotification('info', msg);
+    save();
+    refreshAll();
+    v23Toast('Notification déplacée dans la cloche');
+  };
+
+  function addDismissButtonToAlert(el,key,msg){
+    if(!el) return;
+    const meta=v23EnsureMeta();
+    if(meta.dismissedAlerts[key]){
+      el.style.display='none';
+      return;
+    }
+    el.style.display='';
+    if(el.querySelector('.alert-dismiss')) return;
+    const btn=document.createElement('button');
+    btn.className='alert-dismiss';
+    btn.type='button';
+    btn.textContent='×';
+    btn.setAttribute('aria-label','Masquer cette notification');
+    btn.onclick=(e)=>{
+      e.stopPropagation();
+      window.dismissHomeAlertV23(key,msg);
+    };
+    el.appendChild(btn);
+  }
+
+  function enhanceHomeAlerts(){
+    const meta=v23EnsureMeta();
+
+    const privacy=document.getElementById('privacyInfo');
+    addDismissButtonToAlert(privacy,'privacy_info','Confidentialité : tes données sont synchronisées avec ton compte VestiairePro.');
+
+    const welcome=document.getElementById('alerteImport');
+    addDismissButtonToAlert(welcome,'welcome_import','Bienvenue : importe ton export Vinted ou ajoute tes annonces manuellement.');
+
+    const container=document.getElementById('alertesContainer');
+    if(container){
+      Array.from(container.children).forEach((el,idx)=>{
+        const txt=(el.textContent||'').trim();
+        if(txt.includes('sans aucune vue')){
+          addDismissButtonToAlert(el,'zero_views','Alerte : certaines annonces actives n’ont aucune vue.');
+        }else if(txt.includes('+14 jours')){
+          addDismissButtonToAlert(el,'old_ads','Alerte : certaines annonces sont en ligne depuis plus de 14 jours.');
+        }else{
+          addDismissButtonToAlert(el,'home_alert_'+idx,txt||'Alerte VestiairePro');
+        }
+      });
+    }
+  }
+
+  const oldRenderOverviewV23=window.renderOverview || (typeof renderOverview!=='undefined'?renderOverview:null);
+  window.renderOverview=function(){
+    if(oldRenderOverviewV23) oldRenderOverviewV23.apply(this,arguments);
+    enhanceHomeAlerts();
+  };
+
+  const oldRefreshAllV23=window.refreshAll || (typeof refreshAll!=='undefined'?refreshAll:null);
+  window.refreshAll=function(){
+    if(oldRefreshAllV23) oldRefreshAllV23.apply(this,arguments);
+    setTimeout(enhanceHomeAlerts,60);
+  };
+
+  // Libellés d’interface restants.
+  function replaceObjectiveLabels(){
+    document.querySelectorAll('label,.perf-row-label,.card-action').forEach(el=>{
+      if(el.textContent && el.textContent.includes('Objectif ventes')){
+        el.textContent=el.textContent.replace('Objectif ventes','Colis vendus');
+      }
+    });
+  }
+  setInterval(replaceObjectiveLabels,800);
 })();
 
 </script>
